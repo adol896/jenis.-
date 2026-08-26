@@ -797,7 +797,7 @@
           }
 
           // 1. スパチャ判定
-          const isSC = config.scKeywords.some(keyword => 
+          const isSC = config.scKeywords.some(keyword =>
             heardPhrase.includes(keyword.toLowerCase()) || tokenSurfaces.includes(keyword.toLowerCase())
           );
           if (isSC) {
@@ -807,7 +807,7 @@
 
           // 2. カットイン判定
           for (const rule of config.cutInRules) {
-            const matched = rule.keywords.some(kw => 
+            const matched = rule.keywords.some(kw =>
               heardPhrase.includes(kw.toLowerCase()) || tokenSurfaces.includes(kw.toLowerCase())
             );
             if (matched) {
@@ -827,6 +827,39 @@
                 runAssistantVoice(randomResp, currentLang);
                 return;
               }
+          // --------------------------------------------------
+          // 4. Kuromojiによる「名詞の動的オウム返し・深掘り」処理
+          // --------------------------------------------------
+          if (tokenizerInstance) {
+            const tokens = tokenizerInstance.tokenize(heardPhrase);
+
+            // ノイズ（代名詞・非自立名詞・数など）を除外して意味のある名詞だけを抽出
+            const validNouns = tokens.filter(t => {
+              return t.pos === "名詞" &&
+                     t.pos_detail_1 !== "代名詞" &&  // 「これ」「それ」「私」など
+                     t.pos_detail_1 !== "非自立" &&  // 「こと」「やつ」「よう」など
+                     t.pos_detail_1 !== "数" &&      // 「1」「2」「個」など
+                     t.pos_detail_1 !== "接尾";      // 「さん」「達」など
+            });
+
+            if (validNouns.length > 0) {
+              // 文字数が長い名詞を優先（例：「今日」などの短い単語より「ラーメン」を優先）
+              validNouns.sort((a, b) => b.surface_form.length - a.surface_form.length);
+              const targetNoun = validNouns[0].surface_form;
+
+              // 深掘り質問用テンプレート（ランダム選択）
+              const deepDiveTemplates = [
+                `${targetNoun}の話ですね！それについて詳しく聞かせてください！`,
+                `${targetNoun}ですか！${targetNoun}といえば、最近何かありましたか？`,
+                `${targetNoun}！いいですね。具体的にどんな感じでしたか？`,
+                `${targetNoun}の話題ですね！${targetNoun}についてどう思いましたか？`
+              ];
+
+              const replyMessage = deepDiveTemplates[Math.floor(Math.random() * deepDiveTemplates.length)];
+
+              // AIアバターに喋らせる
+              runAssistantVoice(replyMessage, currentLang);
+              return;
             }
           }
         };
