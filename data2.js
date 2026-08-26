@@ -3,35 +3,6 @@ window.AIData2 = {
   // 1. チャットコメント・音声認識に対するキーワード反応パターン
   patternDict: {
     ja: [
-      { pattern: "Apex|エイペックス", responses: ["Apexですね！最近の環境や使用キャラ、気になります！", "Apexの話題ですね！ナイスショット期待してます！"] },
-      { pattern: "Valorant|ヴァロラント|ヴァロ", responses: ["ヴァロですか！セットアップやエイム勝負、アツいですね！"] },
-      { pattern: "スト7|ストリートファイター", responses: ["スト7！格ゲーの読み合いは見ていて本当に大興奮します！"] },
-      { pattern: "ポケモン|ポケットモンスター", responses: ["ポケモンですね！旅パや対戦、どの世代もワクワクします！"] },
-      { pattern: "マイクラ|マインクラフト", responses: ["マイクラ！建築ですか？それともサバイバル探検中ですか？"] },
-      { pattern: "原神|げんしん", responses: ["原神の話題ですね！推しキャラの育成や探索、楽しいですよね。"] },
-      { pattern: "ゼンゼロ|ゼンレスゾーンゼロ", responses: ["ゼンゼロですね！スタイリッシュなアクションが最高です！"] },
-      { pattern: "パルワールド", responses: ["パルワールド！拠点の自動化やパル捕獲、時間が溶けますね。"] },
-      { pattern: "モンハン|モンスターハンター", responses: ["モンハンですね！一狩りいこうぜ！メイン武器は何使ってますか？"] },
-      { pattern: "マリオ|マリオカート", responses: ["マリオ！誰もが楽しめる名作ですね。マリカなら甲羅の投げ合いですね！"] },
-      { pattern: "FF|ファイナルファンタジー", responses: ["FFシリーズですね！重厚なストーリーとBGMが最高です。"] },
-      { pattern: "ゼルダ|ゼルダの伝説", responses: ["ゼルダですね！自由な発想で謎解きするの、めちゃくちゃ楽しいですよね！"] },
-      { pattern: "LoL|リーグ・オブ・レジェンド", responses: ["LoLですか！集団戦の熱い駆け引きが見どころですね！"] },
-      { pattern: "ドラクエ|ドラゴンクエスト", responses: ["ドラクエ！王道RPGの安心感と冒険感は唯一無二です！"] },
-      { pattern: "スマブラ", responses: ["スマブラですね！吹っ飛ばし合いのバトル、画面から目が離せません！"] },
-      { pattern: "スプラ|スプラトゥーン", responses: ["スプラ！塗り合いとガチマッチ、熱くなりすぎて止まらなくなりますよね！"] },
-      { pattern: "ホラゲ|ホラーゲーム", responses: ["ホラゲですか…！叫び声の準備をしておきますね！"] },
-      { pattern: "音ゲー|リズムゲーム", responses: ["音ゲー！圧倒的な指の動きとリズム感、尊敬します！"] },
-      { pattern: "放置ゲー|インディーゲーム", responses: ["インディーゲームや放置ゲーですね！隠れた名作が多くて奥が深いです。"] },
-      { pattern: "FPS|TPS", responses: ["シューティングゲームですね！立ち回りとエイムの冴えを楽しみにしています！"] },
-      { pattern: "RPG|ソウルライク", responses: ["RPGや死にゲーですね！苦難を乗り越えてボスを倒した瞬間の快感は異常です！"] },
-      { pattern: "ローグライク|Roguelike", responses: ["ローグライク！毎回違う展開になるので、無限に遊べちゃいますね！"] },
-      { pattern: "MMO|MMORPG", responses: ["MMOですね！仲間と一緒にダンジョンへ行く感覚、たまらないです！"] },
-      { pattern: "カードゲーム|TCG", responses: ["カードゲーム！デッキ構築と引きの強さが試されますね！"] },
-      { pattern: "雑談配信|雑談枠", responses: ["雑談枠ですね！リスナーさんとのんびり話す時間、大好きです。"] },
-
-      // --------------------------------------------------
-      // 2. ゲーム配信・ミーム・配信用語（25選）
-      // --------------------------------------------------
       { pattern: "ガチャ|神引き|爆死", responses: ["ガチャの話ですね！神引きをお祈りしています…爆死は回避しましょう！"] },
       { pattern: "リセマラ", responses: ["リセマラ…！妥協するか根気勝ちするか、試練の時間ですね。"] },
       { pattern: "エイム|Aim", responses: ["エイムの調子はどうですか？ビタ押しが決まると最高に気持ちいいですよね！"] },
@@ -141,8 +112,6 @@ window.AIData2 = {
       { pattern: "掃除|模様替え", responses: ["部屋の掃除や模様替え！スッキリした空間になると集中力も増しますね。"] }
     ],
     en: [
-      { pattern: "Apex|Valorant|Fortnite", responses: ["FPS games! Let's get those sharp shots and big wins!"] },
-      { pattern: "Minecraft|Pokemon|Zelda", responses: ["Classic adventures! Exploring those worlds is always amazing."] },
       { pattern: "Pizza|Burger|Ramen|Coffee", responses: ["Talking about delicious food or drinks makes me hungry!"] },
       { pattern: "Stream|Gacha|Gamer", responses: ["Gaming and streaming culture is the absolute best!"] }
     ]
