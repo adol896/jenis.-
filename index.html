@@ -830,42 +830,59 @@
                   }
                 }
 
-                // --------------------------------------------------
-                // 4. Kuromojiによる「名詞の動的オウム返し・深掘り」処理
-                // --------------------------------------------------
-                if (tokenizerInstance) {
-                  const tokens = tokenizerInstance.tokenize(heardPhrase);
+// --------------------------------------------------
+          // 4. Kuromojiによる「名詞の動的オウム返し・深掘り」処理
+          // --------------------------------------------------
+          if (tokenizerInstance) {
+            const tokens = tokenizerInstance.tokenize(heardPhrase);
 
-                  // ノイズ（代名詞・非自立名詞・数など）を除外して意味のある名詞だけを抽出
-                  const validNouns = tokens.filter(t => {
-                    return t.pos === "名詞" &&
-                           t.pos_detail_1 !== "代名詞" &&  // 「これ」「それ」「私」など
-                           t.pos_detail_1 !== "非自立" &&  // 「こと」「やつ」「よう」など
-                           t.pos_detail_1 !== "数" &&      // 「1」「2」「個」など
-                           t.pos_detail_1 !== "接尾";      // 「さん」「達」など
-                  });
+            const validNouns = tokens.filter(t => {
+              return t.pos === "名詞" &&
+                     t.pos_detail_1 !== "代名詞" &&
+                     t.pos_detail_1 !== "非自立" &&
+                     t.pos_detail_1 !== "数" &&
+                     t.pos_detail_1 !== "接尾";
+            });
 
-                  if (validNouns.length > 0) {
-                    // 文字数が長い名詞を優先（例：「今日」などの短い単語より「ラーメン」を優先）
-                    validNouns.sort((a, b) => b.surface_form.length - a.surface_form.length);
-                    const targetNoun = validNouns[0].surface_form;
+            if (validNouns.length > 0) {
+              validNouns.sort((a, b) => b.surface_form.length - a.surface_form.length);
+              const targetNoun = validNouns[0].surface_form;
 
-                    // 深掘り質問用テンプレート（ランダム選択）
-                    const deepDiveTemplates = [
-                      `${targetNoun}の話ですね！それについて詳しく聞かせてください！`,
-                      `${targetNoun}ですか！${targetNoun}といえば、最近何かありましたか？`,
-                      `${targetNoun}！いいですね。具体的にどんな感じでしたか？`,
-                      `${targetNoun}の話題ですね！${targetNoun}についてどう思いましたか？`
-                    ];
+              // ★ 相槌や納得のフレーズを交えたテンプレート
+              const deepDiveTemplates = [
+                `ふむふむ、なるほど！${targetNoun}の話ですね！それについて詳しく聞かせてください！`,
+                `なるほど、そういうことですね！${targetNoun}といえば、最近何かありましたか？`,
+                `ふむふむ！${targetNoun}についてですね。具体的にどんな感じだったんですか？`,
+                `なるほどなるほど！${targetNoun}の話題ですね。${targetNoun}についてどう思いましたか？`
+              ];
 
-                    const replyMessage = deepDiveTemplates[Math.floor(Math.random() * deepDiveTemplates.length)];
+              const replyMessage = deepDiveTemplates[Math.floor(Math.random() * deepDiveTemplates.length)];
 
-                    // AIアバターに喋らせる
-                    runAssistantVoice(replyMessage, currentLang);
-                    return;
-                  }
-                }
-              };
+              if (voiceRecognition && isRecognitionActive) {
+                voiceRecognition.stop();
+              }
+              runAssistantVoice(replyMessage, currentLang);
+              return;
+            }
+          }
+
+          // --------------------------------------------------
+          // 5. デフォルト応答（どのパターンにも引っかからなかった場合）
+          // --------------------------------------------------
+          if (voiceRecognition && isRecognitionActive) {
+            voiceRecognition.stop();
+          }
+
+          // ★ ランダムでバリエーションを持たせた応答
+          const defaultReplies = [
+            "ふむふむ、なるほど！そういうことですね。もう少し詳しく教えてもらえますか？",
+            "なるほどなるほど、よく分かりました！それからどうなったんですか？",
+            "なるほど、そういうわけだったんですね！教えてくれてありがとうございます。"
+          ];
+          const randomDefault = defaultReplies[Math.floor(Math.random() * defaultReplies.length)];
+
+          runAssistantVoice(randomDefault, currentLang);
+        };
 
               updateSpeechRecognitionLang();
               setInterval(() => { if (!isRecognitionActive) safeStartRecognition(); }, 1000);
