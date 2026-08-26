@@ -193,7 +193,6 @@
         }
       };
 
-      // デフォルトデータ（外部ファイルがない場合のフォールバック）
       const defaultOncePhrases = {
         ja: [
           "この1週間の中で、一番「美味しかったなぁ」って思った食べ物は何ですか？",
@@ -253,10 +252,30 @@
       };
 
       // =========================================================
-      // 音声・効果音（SE）の設定 (日本語パスエンコード付き)
+      // 音声・効果音（SE）の設定
       // =========================================================
-      const sePlayer = new Audio(encodeURI("剣を抜く.mp3"));
-      sePlayer.volume = 0.5;
+      // パスを明確に指定
+      const sePlayer = new Audio('./' + encodeURIComponent("剣を抜く.mp3"));
+      sePlayer.volume = 0.7;
+
+      // ブラウザ制限対策：オーディオのロック解除状態
+      let isAudioUnlocked = false;
+
+      function unlockAudio() {
+        if (isAudioUnlocked) return;
+        
+        // ユーザーインタラクション時にダミー再生して制限解除
+        sePlayer.volume = 0;
+        sePlayer.play().then(() => {
+          sePlayer.pause();
+          sePlayer.currentTime = 0;
+          sePlayer.volume = 0.7;
+          isAudioUnlocked = true;
+          console.log("SE (剣を抜く.mp3) のオーディオ再生制限を解除しました。");
+        }).catch((err) => {
+          console.warn("オーディオアンロック失敗:", err);
+        });
+      }
 
       function playSuperChatSynthSE() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -408,7 +427,7 @@
       // =========================================================
       // カットイン ＆ スパチャ演出 ＆ 紙吹雪機能
       // =========================================================
-      function executePhraseCutIn(text) {
+      async function executePhraseCutIn(text) {
         const cutInBox = document.getElementById('phrase-cutin-box');
         const cutInText = document.getElementById('phrase-text-content');
 
@@ -419,13 +438,13 @@
 
         cutInBox.classList.add('slide-in');
 
-        // カットイン時にSEを再生 (Promiseエラーキャッチ付き)
-        setTimeout(() => {
+        // SEの再生処理 (非同期処理に改善)
+        try {
           sePlayer.currentTime = 0;
-          sePlayer.play().catch((audioErr) => {
-            console.warn("SE再生エラー (自動再生がブロックされたか、ファイルが見つかりません):", audioErr);
-          });
-        }, 300);
+          await sePlayer.play();
+        } catch (audioErr) {
+          console.warn("SE再生エラー: ブラウザの自動再生ブロックかファイルパスエラーです。", audioErr);
+        }
 
         setTimeout(() => {
           cutInBox.classList.remove('slide-in');
@@ -576,6 +595,7 @@
 
       toggleLangBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        unlockAudio(); // 音声アンロック
         if (currentLang === 'ja') {
           currentLang = 'en';
           toggleLangBtn.innerText = "LANG: EN";
@@ -589,6 +609,7 @@
 
       toggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        unlockAudio(); // 音声アンロック
         const isHidden = avatarFrame.classList.toggle('element-hide');
         aiStatusMsg.classList.toggle('element-hide');
         toggleBtn.innerText = isHidden ? "AVATAR SHOW" : "AVATAR HIDE";
@@ -786,14 +807,12 @@
         safeStartRecognition();
       }
 
-      // 画面全体クリック時の処理（ブラウザの自動再生ブロック解除 ＆ AI起動）
+      // 画面全体クリック時の処理（オーディオアンロック ＆ 音声認識・AI起動）
       document.body.addEventListener('click', (e) => {
         if (e.target === toggleBtn || e.target === toggleLangBtn) return;
 
-        // ブラウザの音声再生ブロックを解除（アンロック）
-        if (sePlayer) {
-          sePlayer.load();
-        }
+        // オーディオ制限の解除
+        unlockAudio();
 
         safeStartRecognition();
         resetSilenceTimer();
