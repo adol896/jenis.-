@@ -141,6 +141,8 @@
     <!-- データファイルの読み込み -->
     <script src="data.js"></script>
     <script src="data2.js"></script>
+    <!-- ★ kuromoji.js 本体を追加 -->
+    <script src="kuromoji.js"></script>
   </head>
   <body>
     <!-- 紙吹雪用キャンバス -->
@@ -173,8 +175,30 @@
 
     <script>
       // =========================================================
+      // ★ ここに Kuromoji の初期化コードを追加します
+      // =========================================================
+      let tokenizerInstance = null;
+
+      if (typeof kuromoji !== 'undefined') {
+        kuromoji.builder({ dicPath: "./dict/" }).build((err, tokenizer) => {
+          if (err) {
+            console.error("Kuromoji 辞書のロードに失敗しました:", err);
+            return;
+          }
+          tokenizerInstance = tokenizer;
+          console.log("Kuromoji 辞書のロードが完了しました！");
+        });
+      }
+      // =========================================================
+
+      // =========================================================
       // データの統合処理 (data.js と data2.js をマージ)
       // =========================================================
+      const rawData1 = window.AIData1 || window.AIData || {};
+      const rawData2 = window.AIData2 || {};
+
+      // （この下には元々のコードが続きます）
+
       const rawData1 = window.AIData1 || window.AIData || {};
       const rawData2 = window.AIData2 || {};
 
@@ -267,7 +291,7 @@
 
       function unlockAudio() {
         if (isAudioUnlocked) return;
-        
+
         // ユーザーインタラクション時にダミー再生して制限解除
         sePlayer.volume = 0;
         sePlayer.play().then(() => {
@@ -760,7 +784,15 @@
 
           console.log("認識した言葉:", heardPhrase);
 
-          // 1. スパチャ判定
+          // ★ Kuromojiで形態素解析（もし読み込みが完了していれば）
+          let tokens = [];
+          if (tokenizerInstance) {
+            tokens = tokenizerInstance.tokenize(heardPhrase);
+            // デバッグ用に解析結果の単語リストを出力
+            console.log("形態素解析結果:", tokens.map(t => t.surface_form));
+          }
+
+          // 1. スパチャ判定（全文検索 ＋ 形態素の基本形チェックなども可能）
           const isSC = config.scKeywords.some(keyword => heardPhrase.includes(keyword.toLowerCase()));
           if (isSC) {
             triggerSuperChatEffects();
@@ -776,13 +808,11 @@
             }
           }
 
-          // ★3. 【追加】AI辞書（patternDict）のキーワード反応チェック
+          // 3. AI辞書（patternDict）のキーワード反応チェック
           const patterns = aiData.patternDict?.[currentLang] || [];
           for (const item of patterns) {
-            // 正規表現パターンまたは文字列の一部一致をチェック
             const regex = new RegExp(item.pattern, "i");
             if (regex.test(heardPhrase)) {
-              // マッチしたレスポンスの中からランダムで1つ選んで喋る
               const responses = item.responses;
               if (responses && responses.length > 0) {
                 const randomResp = responses[Math.floor(Math.random() * responses.length)];
