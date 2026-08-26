@@ -141,7 +141,6 @@
     <!-- データファイルの読み込み -->
     <script src="data.js"></script>
     <script src="data2.js"></script>
-    <!-- ★ kuromoji.js 本体を追加 -->
     <script src="kuromoji.js"></script>
   </head>
   <body>
@@ -175,7 +174,7 @@
 
     <script>
       // =========================================================
-      // ★ ここに Kuromoji の初期化コードを追加します
+      // Kuromoji 初期化
       // =========================================================
       let tokenizerInstance = null;
 
@@ -189,16 +188,10 @@
           console.log("Kuromoji 辞書のロードが完了しました！");
         });
       }
-      // =========================================================
 
       // =========================================================
       // データの統合処理 (data.js と data2.js をマージ)
       // =========================================================
-      const rawData1 = window.AIData1 || window.AIData || {};
-      const rawData2 = window.AIData2 || {};
-
-      // （この下には元々のコードが続きます）
-
       const rawData1 = window.AIData1 || window.AIData || {};
       const rawData2 = window.AIData2 || {};
 
@@ -282,24 +275,21 @@
       // =========================================================
       // 音声・効果音（SE）の設定
       // =========================================================
-      // パスを明確に指定
       const sePlayer = new Audio('./' + encodeURIComponent("剣を抜く.mp3"));
       sePlayer.volume = 0.7;
 
-      // ブラウザ制限対策：オーディオのロック解除状態
       let isAudioUnlocked = false;
 
       function unlockAudio() {
         if (isAudioUnlocked) return;
 
-        // ユーザーインタラクション時にダミー再生して制限解除
         sePlayer.volume = 0;
         sePlayer.play().then(() => {
           sePlayer.pause();
           sePlayer.currentTime = 0;
           sePlayer.volume = 0.7;
           isAudioUnlocked = true;
-          console.log("SE (剣を抜く.mp3) のオーディオ再生制限を解除しました。");
+          console.log("SE のオーディオ再生制限を解除しました。");
         }).catch((err) => {
           console.warn("オーディオアンロック失敗:", err);
         });
@@ -422,7 +412,7 @@
       // 20秒無言検知・自動トーク機能
       // =========================================================
       let silenceTimer = null;
-      const SILENCE_LIMIT = 20 * 1000; // 20秒
+      const SILENCE_LIMIT = 20 * 1000;
 
       function resetSilenceTimer() {
         if (silenceTimer) clearTimeout(silenceTimer);
@@ -466,12 +456,11 @@
 
         cutInBox.classList.add('slide-in');
 
-        // SEの再生処理 (非同期処理に改善)
         try {
           sePlayer.currentTime = 0;
           await sePlayer.play();
         } catch (audioErr) {
-          console.warn("SE再生エラー: ブラウザの自動再生ブロックかファイルパスエラーです。", audioErr);
+          console.warn("SE再生エラー:", audioErr);
         }
 
         setTimeout(() => {
@@ -623,7 +612,7 @@
 
       toggleLangBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        unlockAudio(); // 音声アンロック
+        unlockAudio();
         if (currentLang === 'ja') {
           currentLang = 'en';
           toggleLangBtn.innerText = "LANG: EN";
@@ -637,7 +626,7 @@
 
       toggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        unlockAudio(); // 音声アンロック
+        unlockAudio();
         const isHidden = avatarFrame.classList.toggle('element-hide');
         aiStatusMsg.classList.toggle('element-hide');
         toggleBtn.innerText = isHidden ? "AVATAR SHOW" : "AVATAR HIDE";
@@ -681,7 +670,7 @@
       }
 
       function getVoiceForLang(langCode) {
-        const voices = availableVoices.length > 0 ? availableVoices : speechSynthesis.getVoices();
+        const voices = availableVoices.length > 0 ? availableVoices : synthesizer.getVoices();
         if (langCode === 'en') {
           return voices.find(v => v.lang.startsWith('en') && (
             v.name.includes('Google') || v.name.includes('Samantha')
@@ -716,7 +705,7 @@
           if (currentChunkIndex < subtitleChunks.length) {
             aiSubtitleBox.classList.remove('active');
             setTimeout(() => {
-              aiSubtitleBox.innerText = subtitleChunks[currentChunkIndex];
+              aiSubtitleBox.innerText = subtitleChunks[currentChunkIndex] || "";
               aiSubtitleBox.classList.add('active');
             }, 150);
           }
@@ -775,6 +764,21 @@
         voiceRecognition.continuous = true;
         voiceRecognition.interimResults = false;
 
+        voiceRecognition.onstart = () => {
+          isRecognitionActive = true;
+          console.log("音声認識が開始されました。");
+        };
+
+        voiceRecognition.onend = () => {
+          isRecognitionActive = false;
+          console.log("音声認識が停止しました。");
+        };
+
+        voiceRecognition.onerror = (e) => {
+          isRecognitionActive = false;
+          console.warn("音声認識エラー:", e.error);
+        };
+
         voiceRecognition.onresult = (event) => {
           resetSilenceTimer();
 
@@ -784,16 +788,18 @@
 
           console.log("認識した言葉:", heardPhrase);
 
-          // ★ Kuromojiで形態素解析（もし読み込みが完了していれば）
-          let tokens = [];
+          // Kuromojiによる形態素解析の実行
+          let tokenSurfaces = [];
           if (tokenizerInstance) {
-            tokens = tokenizerInstance.tokenize(heardPhrase);
-            // デバッグ用に解析結果の単語リストを出力
-            console.log("形態素解析結果:", tokens.map(t => t.surface_form));
+            const tokens = tokenizerInstance.tokenize(heardPhrase);
+            tokenSurfaces = tokens.map(t => t.surface_form);
+            console.log("形態素解析単語リスト:", tokenSurfaces);
           }
 
-          // 1. スパチャ判定（全文検索 ＋ 形態素の基本形チェックなども可能）
-          const isSC = config.scKeywords.some(keyword => heardPhrase.includes(keyword.toLowerCase()));
+          // 1. スパチャ判定
+          const isSC = config.scKeywords.some(keyword => 
+            heardPhrase.includes(keyword.toLowerCase()) || tokenSurfaces.includes(keyword.toLowerCase())
+          );
           if (isSC) {
             triggerSuperChatEffects();
             return;
@@ -801,7 +807,9 @@
 
           // 2. カットイン判定
           for (const rule of config.cutInRules) {
-            const matched = rule.keywords.some(kw => heardPhrase.includes(kw.toLowerCase()));
+            const matched = rule.keywords.some(kw => 
+              heardPhrase.includes(kw.toLowerCase()) || tokenSurfaces.includes(kw.toLowerCase())
+            );
             if (matched) {
               executePhraseCutIn(rule.text);
               return;
@@ -842,13 +850,11 @@
         safeStartRecognition();
       }
 
-      // 画面全体クリック時の処理（オーディオアンロック ＆ 音声認識・AI起動）
+      // 画面全体クリック時の処理
       document.body.addEventListener('click', (e) => {
         if (e.target === toggleBtn || e.target === toggleLangBtn) return;
 
-        // オーディオ制限の解除
         unlockAudio();
-
         safeStartRecognition();
         resetSilenceTimer();
         triggerTalk();
