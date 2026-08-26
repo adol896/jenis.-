@@ -179,6 +179,10 @@
       const rawData2 = window.AIData2 || {};
 
       const aiData = {
+        patternDict: {
+          ja: [...(rawData1.patternDict?.ja || []), ...(rawData2.patternDict?.ja || [])],
+          en: [...(rawData1.patternDict?.en || []), ...(rawData2.patternDict?.en || [])]
+        },
         oncePhrases: {
           ja: [...(rawData1.oncePhrases?.ja || []), ...(rawData2.oncePhrases?.ja || [])],
           en: [...(rawData1.oncePhrases?.en || []), ...(rawData2.oncePhrases?.en || [])]
@@ -747,21 +751,6 @@
         voiceRecognition.continuous = true;
         voiceRecognition.interimResults = false;
 
-        voiceRecognition.onstart = () => {
-          isRecognitionActive = true;
-        };
-
-        voiceRecognition.onend = () => {
-          isRecognitionActive = false;
-          safeStartRecognition();
-        };
-
-        voiceRecognition.onerror = (e) => {
-          if (e.error === "not-allowed") {
-            isRecognitionActive = false;
-          }
-        };
-
         voiceRecognition.onresult = (event) => {
           resetSilenceTimer();
 
@@ -771,19 +760,35 @@
 
           console.log("認識した言葉:", heardPhrase);
 
-          // スパチャ判定
+          // 1. スパチャ判定
           const isSC = config.scKeywords.some(keyword => heardPhrase.includes(keyword.toLowerCase()));
           if (isSC) {
             triggerSuperChatEffects();
             return;
           }
 
-          // カットイン判定
+          // 2. カットイン判定
           for (const rule of config.cutInRules) {
             const matched = rule.keywords.some(kw => heardPhrase.includes(kw.toLowerCase()));
             if (matched) {
               executePhraseCutIn(rule.text);
               return;
+            }
+          }
+
+          // ★3. 【追加】AI辞書（patternDict）のキーワード反応チェック
+          const patterns = aiData.patternDict?.[currentLang] || [];
+          for (const item of patterns) {
+            // 正規表現パターンまたは文字列の一部一致をチェック
+            const regex = new RegExp(item.pattern, "i");
+            if (regex.test(heardPhrase)) {
+              // マッチしたレスポンスの中からランダムで1つ選んで喋る
+              const responses = item.responses;
+              if (responses && responses.length > 0) {
+                const randomResp = responses[Math.floor(Math.random() * responses.length)];
+                runAssistantVoice(randomResp, currentLang);
+                return;
+              }
             }
           }
         };
