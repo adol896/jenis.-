@@ -1,51 +1,122 @@
 // data2.js
 window.AIData2 = {
+// 1. チャットコメントへの自動応答パターン（キーワード反応）
   patternDict: {
     ja: [
       {
-        pattern: "バイバイ|またね|おつかれ",
-        responses: ["また遊びに来てね！おつかれさま！", "ばいばーい！良い一日を！"]
+        pattern: "うまい|上手|神プレイ|プロ|天才|ナイス",
+        responses: ["ナイスプレイ！今の動き完璧だったね！", "さすが！見ててスカッとするね！", "魅せてくれるなぁ！"]
+      },
+      {
+        pattern: "あくむ|難易度|むずい|無理|無理ゲー|死にゲー",
+        responses: ["ここ激ムズゾーンだよね……集中していこう！", "一筋縄ではいかないか……！頑張って！", "あきらめたらそこで試合終了だよ！"]
+      },
+      {
+        pattern: "初見|はじめまして|新顔",
+        responses: ["初見さんいらっしゃい！気軽にコメントしていってね！", "いらっしゃい！一緒にゲーム楽しんでいこう！"]
+      },
+      {
+        pattern: "草|www|笑|ウケる|うける",
+        responses: ["今の面白すぎるでしょ！w", "腹筋崩壊するわこんなのw", "神展開すぎて草"]
+      },
+      {
+        pattern: "ガンバ|がんばれ|応援|ファイティン",
+        responses: ["みんなの応援が力になる！応援ありがとう！", "気合入れていくよー！絶対勝つ！"]
+      },
+      {
+        pattern: "GG|gg|ジージー|おつ|対戦ありがとうございました",
+        responses: ["GG！ナイスゲームだったね！", "対戦ありがとうございました！いい勝負だった！"]
       }
     ],
     en: [
       {
-        pattern: "bye|goodnight|see ya",
-        responses: ["See you next time! Take care!", "Bye bye! Have a great day!"]
+        pattern: "clutch|pog|poggers|nice play|insane|pro",
+        responses: ["What a play! That was clean!", "POG! Incredible skills!", "Insane movement!"]
+      },
+      {
+        pattern: "hard|so hard|impossible|so close|unlucky",
+        responses: ["This part is tough! You've got this!", "Unlucky, but we can do this!", "Don't give up!"]
+      },
+      {
+        pattern: "first time|new viewer|hello|hi",
+        responses: ["Welcome to the stream! Great to have you here!", "Welcome in! Hope you enjoy the game!"]
+      },
+      {
+        pattern: "lol|lmao|omg|funny|haha",
+        responses: ["LMAO that was priceless!", "I can't stop laughing lol", "Pure comedic timing!"]
+      },
+      {
+        pattern: "gg|good game|well played",
+        responses: ["GG! That was an awesome match!", "GGs everyone! Well played!"]
       }
     ]
   },
 
+  // 2. トピックに応じた動的返答テンプレート
   templates: {
-    ja: ["実は {topic} について最近勉強中なんだ！"],
-    en: ["I'm actually learning more about {topic}!"]
-  },
-
-  fillerResponses: {
-    ja: ["そうなんだ！", "へぇー！"],
-    en: ["Oh really?", "That's cool!"]
-  },
-
-  oncePhrases: {
-    ja: ["お知らせ！今週末に特別配信を予定してるよ！"],
-    en: ["Announcement! Special stream coming up this weekend!"]
-  },
-
-  loopPhrases: {
-    ja: ["SNSのフォローもよろしくね！"],
-    en: ["Don't forget to follow on social media as well!"]
-  },
-
-  scKeywords: {
-    ja: ["赤スパ", "ギフト", "ドネーション"],
-    en: ["donation", "tip"]
-  },
-
-  cutInRules: {
     ja: [
-      { keywords: ["勝利", "勝ち", "ビクトリー"], text: "VICTORY!" }
+      "{topic} の使いどころ、めちゃくちゃ重要になってくるね！",
+      "ここで {topic} が来るとは……熱い展開になってきた！",
+      "{topic} をどう攻略するかが勝負の分かれ目だね！"
     ],
     en: [
-      { keywords: ["victory", "win"], text: "VICTORY!" }
+      "Using {topic} right now is going to be crucial!",
+      "I didn't expect {topic} here! Things are getting intense!",
+      "How we handle {topic} will decide the outcome!"
+    ]
+  },
+
+  // 3. 一般的な相づち
+  fillerResponses: {
+    ja: ["画面から目が離せない……！", "おおっ、どうなる！？", "手に汗握る展開だね！", "いいぞいいぞ！"],
+    en: ["Can't take my eyes off the screen!", "Oh, what's gonna happen?!", "Edge of my seat right now!", "Let's go!"]
+  },
+
+  // 4. 定期・アナウンス単発フレーズ
+  oncePhrases: {
+    ja: [
+      "高評価ボタンを押してもらえると、配信のモチベーションが爆上がりします！",
+      "みんなの好きなゲームのキャラクターや武器も教えてね！"
+    ],
+    en: [
+      "Hitting that like button really boosts the stream, thank you!",
+      "Let me know your favorite characters or weapons in the chat!"
+    ]
+  },
+
+  // 5. ループ巡回用フレーズ
+  loopPhrases: {
+    ja: [
+      "今日のプレイング、調子どう？",
+      "みんなならこの場面、どう立ち回る？",
+      "配信楽しんでもらえてたら、ぜひチャンネル登録よろしくね！"
+    ],
+    en: [
+      "How are we feeling about today's gameplay?",
+      "How would you guys handle this situation?",
+      "If you're enjoying the stream, don't forget to subscribe!"
+    ]
+  },
+
+  // 6. スーパーチャット・ギフト検知用キーワード
+  scKeywords: {
+    ja: ["スパチャ", "スーパーチャット", "ナイスパ", "ナイスギフト", "投げ銭", "ドネーション"],
+    en: ["superchat", "super chat", "bits", "donation", "gifted", "tip"]
+  },
+
+  // 7. カットイン演出ルール（テキスト＆音声連動用）
+  cutInRules: {
+    ja: [
+      { keywords: ["ここだ", "決めろ", "いけー"], text: "ここだ！" },
+      { keywords: ["勝ち", "勝利", "ビクトリー", "勝った"], text: "VICTORY!" },
+      { keywords: ["やばい", "ピンチ", "助けて"], text: "DANGER!" },
+      { keywords: ["クリティカル", "ヘッドショット", "エイム神"], text: "HEADSHOT!" }
+    ],
+    en: [
+      { keywords: ["this is it", "lets go", "now"], text: "THIS IS IT!" },
+      { keywords: ["victory", "win", "we won"], text: "VICTORY!" },
+      { keywords: ["danger", "watch out", "no way"], text: "DANGER!" },
+      { keywords: ["headshot", "critical", "nice shot"], text: "HEADSHOT!" }
     ]
   },
 
