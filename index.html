@@ -1,141 +1,775 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>20秒無言検知チャットデモ</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Assistant "Genis" & Multi-Lang SuperChat Overlay</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+      /* ベーススタイル */
+      html, body {
+          margin: 0; padding: 0; width: 100%; height: 100%;
+          background-color: #00FF00; overflow: hidden; /* OBSのクロマキー(Green)用 */
+          font-family: 'Helvetica Neue', Arial, sans-serif; color: #ffffff;
+      }
 
-        body {
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-            background-color: #f4f6f8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
+      /* [1] AI Assistant (Genis) UI */
+      #assistant-container {
+          position: absolute; bottom: 20px; left: 10px;
+          display: flex; flex-direction: column; align-items: center; z-index: 10;
+          background: transparent !important;
+      }
+      #avatar-frame {
+          width: 360px; height: 200px; overflow: hidden;
+          position: relative; background: transparent !important;
+          transition: opacity 0.3s ease;
+          display: flex; justify-content: center; align-items: center;
+      }
+      #avatar-orb {
+          width: 110px; height: 110px; border-radius: 50%;
+          background: radial-gradient(circle at 35% 35%, #ffffff, #00f3ff 45%, #0066ff 75%, #001133 100%);
+          box-shadow: 0 0 25px #00f3ff, 0 0 50px rgba(0, 243, 255, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.8);
+          position: absolute; top: 45%; left: 50%;
+          transform: translate(-50%, -50%) scale(1);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+          animation: orb-idle 3s infinite ease-in-out;
+      }
+      @keyframes orb-idle {
+          0%, 100% {
+              transform: translate(-50%, -50%) scale(1);
+              box-shadow: 0 0 20px #00f3ff, 0 0 40px rgba(0, 243, 255, 0.5);
+          }
+          50% {
+              transform: translate(-50%, -50%) scale(1.06);
+              box-shadow: 0 0 35px #00f3ff, 0 0 60px rgba(0, 243, 255, 0.8);
+          }
+      }
+      #avatar-orb.speaking-pulse {
+          transform: translate(-50%, -50%) scale(1.22);
+          box-shadow: 0 0 45px #00f3ff, 0 0 85px #00f3ff, inset 0 0 25px #ffffff;
+      }
+      #ai-status-msg {
+          font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+          color: rgba(255, 255, 255, 0.7); text-shadow: 0 2px 4px rgba(0,0,0,0.9); margin-top: 4px;
+          transition: opacity 0.3s ease;
+      }
+      .controls-row {
+          display: flex; gap: 8px; margin-top: 10px;
+      }
+      .ui-btn {
+          background: rgba(15, 20, 35, 0.85); border: 1px solid #00f3ff; color: #00f3ff;
+          border-radius: 4px; padding: 6px 12px; font-size: 11px; font-weight: bold;
+          letter-spacing: 1px; cursor: pointer; box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+          transition: all 0.2s ease; pointer-events: auto;
+      }
+      .ui-btn:hover {
+          background: #00f3ff; color: #0d1117; box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+      }
+      .element-hide { opacity: 0 !important; pointer-events: none !important; }
 
-        .chat-container {
-            width: 100%;
-            max-width: 480px;
-            height: 600px;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
+      #ai-subtitle-box {
+          position: absolute; bottom: 75px; left: 50%; transform: translateX(-50%);
+          background: rgba(6, 10, 22, 0.85);
+          border-left: 4px solid #00f3ff; border-radius: 0 8px 8px 0;
+          padding: 14px 24px; font-size: 24px; font-weight: bold;
+          width: 520px; text-align: center; line-height: 1.4;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+          opacity: 0; transform: translate(-50%, 10px);
+          transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+          pointer-events: none; word-break: break-word; z-index: 20;
+      }
+      #ai-subtitle-box.active { opacity: 1; transform: translate(-50%, 0); }
 
-        .chat-header {
-            background: #2c3e50;
-            color: #ffffff;
-            padding: 16px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            text-align: center;
-        }
+      /* [2] カットイン・スパチャ演出 UI */
+      #phrase-cutin-box {
+          position: absolute; top: 45%; left: 50%;
+          width: 90%; max-width: 600px; height: 110px;
+          display: flex; align-items: center; justify-content: center;
+          z-index: 50; pointer-events: none;
+          background: repeating-linear-gradient(90deg, #3d2314, #3d2314 4px, #2b180d 4px, #2b180d 8px),
+                      linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);
+          background-blend-mode: multiply;
+          border: 5px solid #1a0f08; border-radius: 4px;
+          box-shadow: 0 0 30px #ff6600, 0 0 60px #8000ff, inset 0 0 20px rgba(0, 0, 0, 0.8);
+          transform: translate(100vw, -50%) skewX(-10deg); opacity: 0; transition: none;
+      }
+      #phrase-cutin-box.slide-in {
+          opacity: 1; transform: translate(-50%, -50%) skewX(-10deg);
+          transition: transform 0.25s cubic-bezier(0.075, 0.82, 0.165, 1), opacity 0.15s ease-out;
+      }
+      #phrase-cutin-box.slide-out {
+          opacity: 0; transform: translate(-150vw, -50%) skewX(-10deg);
+          transition: transform 0.2s ease-in, opacity 0.15s ease-in;
+      }
+      #phrase-text-content {
+          font-size: 38px; font-weight: 900; font-family: 'Impact', 'Arial Black', sans-serif;
+          letter-spacing: 6px; color: #ff9900; text-shadow: 0 0 8px #000, 0 0 20px #8000ff, 2px 2px 2px #3a0000;
+      }
+      @media (min-width: 768px) {
+          #phrase-text-content { font-size: 58px; letter-spacing: 10px; }
+      }
 
-        .chat-log {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: #f9fbfd;
-        }
+      #sc-popup-box {
+          position: absolute; top: 45%; left: 50%;
+          transform: translate(-50%, -30%);
+          background: linear-gradient(135deg, #ff4e50, #f9d423);
+          border: 4px solid #ffffff; border-radius: 16px;
+          padding: 14px 28px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 40px rgba(255, 215, 0, 0.8);
+          z-index: 60; pointer-events: none; opacity: 0;
+          box-sizing: border-box; max-width: 85%;
+          transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+      }
+      #sc-popup-box.show {
+          transform: translate(-50%, -50%); opacity: 1;
+      }
+      #sc-text-content {
+          font-size: 26px; font-weight: 900; color: #ffffff;
+          text-shadow: 2px 2px 6px rgba(0,0,0,0.5), 0 0 10px rgba(255,255,255,0.4);
+          white-space: nowrap; text-align: center;
+      }
+      @media (min-width: 768px) {
+          #sc-popup-box { padding: 22px 45px; border-width: 5px; }
+          #sc-text-content { font-size: 42px; }
+      }
 
-        .message {
-            max-width: 80%;
-            padding: 10px 14px;
-            border-radius: 16px;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            word-wrap: break-word;
-        }
-
-        .message.user {
-            align-self: flex-end;
-            background: #007bff;
-            color: #ffffff;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.bot {
-            align-self: flex-start;
-            background: #e9ecef;
-            color: #212529;
-            border-bottom-left-radius: 4px;
-        }
-
-        .message.silence {
-            align-self: center;
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-            font-size: 0.85rem;
-            text-align: center;
-            border-radius: 20px;
-            padding: 6px 14px;
-            font-style: italic;
-        }
-
-        .input-area {
-            display: flex;
-            padding: 12px;
-            gap: 8px;
-            border-top: 1px solid #e9ecef;
-            background: #ffffff;
-        }
-
-        .input-area input {
-            flex: 1;
-            padding: 10px 14px;
-            border: 1px solid #ced4da;
-            border-radius: 20px;
-            outline: none;
-            font-size: 0.95rem;
-        }
-
-        .input-area input:focus {
-            border-color: #007bff;
-        }
-
-        .input-area button {
-            padding: 10px 18px;
-            background: #007bff;
-            color: #ffffff;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-
-        .input-area button:hover {
-            background: #0056b3;
-        }
+      #canvas-confetti {
+          position: absolute; top: 0; left: 0;
+          width: 100%; height: 100%; z-index: 70; pointer-events: none;
+      }
     </style>
-</head>
-<body>
+    <!-- 2つのデータファイルを連続で読み込み -->
+    <script src="data.js"></script>
+    <script src="data2.js"></script>
+  </head>
+  <body>
+    <!-- 紙吹雪用キャンバス -->
+    <canvas id="canvas-confetti"></canvas>
 
-    <div class="chat-container">
-        <div class="chat-header">無言検知チャット</div>
-        <div id="chat-log" class="chat-log"></div>
-        <div class="input-area">
-            <input type="text" id="message-input" placeholder="メッセージを入力..." autocomplete="off">
-            <button id="send-button">送信</button>
-        </div>
+    <!-- AI アバター ＆ 操作UI -->
+    <div id="assistant-container">
+      <div id="avatar-frame">
+        <div id="avatar-orb"></div>
+      </div>
+      <div id="ai-status-msg">STANDBY</div>
+      <div class="controls-row">
+        <button id="toggle-lang-btn" class="ui-btn">LANG: JA</button>
+        <button id="toggle-avatar-btn" class="ui-btn">AVATAR HIDE</button>
+      </div>
     </div>
 
-    <!-- メイン処理を行うJavaScriptモジュールの読み込み -->
-    <script type="module" src="app.js"></script>
-</body>
+    <!-- AI 字幕ボックス -->
+    <div id="ai-subtitle-box">...</div>
+
+    <!-- 通常ワードカットイン -->
+    <div id="phrase-cutin-box">
+      <div id="phrase-text-content"></div>
+    </div>
+
+    <!-- スパチャポップアップ -->
+    <div id="sc-popup-box">
+      <div id="sc-text-content">ありがとうございます！</div>
+    </div>
+
+    <script>
+      // 2つの外部データ (AIData1 / AIData2) を統合する処理
+      function mergeAIData(d1 = {}, d2 = {}) {
+        const merged = {
+          patternDict: { ja: [], en: [] },
+          templates: { ja: [], en: [] },
+          fillerResponses: { ja: [], en: [] },
+          oncePhrases: { ja: [], en: [] },
+          loopPhrases: { ja: [], en: [] },
+          scKeywords: { ja: [], en: [] },
+          cutInRules: { ja: [], en: [] },
+          silencePhrases: { ja: [], en: [] }
+        };
+
+        const langs = ['ja', 'en'];
+
+        Object.keys(merged).forEach(key => {
+          langs.forEach(lang => {
+            const arr1 = (d1[key] && d1[key][lang]) ? d1[key][lang] : [];
+            const arr2 = (d2[key] && d2[key][lang]) ? d2[key][lang] : [];
+            merged[key][lang] = arr1.concat(arr2);
+          });
+        });
+
+        return merged;
+      }
+
+      // data.js (window.AIData1) と data2.js (window.AIData2) をマージ
+      // 単一データ (window.AIData) もフォールバックとしてケア
+      const rawData1 = window.AIData1 || window.AIData || {};
+      const rawData2 = window.AIData2 || {};
+      const aiData = mergeAIData(rawData1, rawData2);
+
+      // 人工無脳クラス
+      class NativeBot {
+        constructor(dictionaryData) {
+          this.segmenter = new Intl.Segmenter('ja', { granularity: 'word' });
+          this.stopWords = new Set(['です', 'ます', 'は', 'が', 'を', 'に', 'の', 'と', 'で', 'から', 'まで', 'ね', 'よ', 'な', 'か', '？', '！', '。', '、', 'is', 'a', 'the', 'to', 'in', 'it', 'you', 'i']);
+          this.state = { userTopic: null, turnCount: 0 };
+
+          const data = dictionaryData || {};
+
+          // パターン辞書の初期化（文字列パターンをRegExpオブジェクトに自動変換）
+          this.patternDict = { ja: [], en: [] };
+          if (data.patternDict) {
+            ['ja', 'en'].forEach(lang => {
+              if (data.patternDict[lang]) {
+                this.patternDict[lang] = data.patternDict[lang].map(item => ({
+                  pattern: item.pattern instanceof RegExp ? item.pattern : new RegExp(item.pattern, 'i'),
+                  responses: item.responses || []
+                }));
+              }
+            });
+          }
+
+          this.templates = data.templates || { ja: [], en: [] };
+          this.fillerResponses = data.fillerResponses || { ja: [], en: [] };
+          this.markovDict = {};
+        }
+
+        tokenize(text) {
+          const segments = this.segmenter.segment(text);
+          return Array.from(segments).filter(s => s.isWordLike).map(s => s.segment);
+        }
+
+        extractKeywords(tokens) {
+          return tokens.filter(token => !this.stopWords.has(token.toLowerCase()) && token.length > 1);
+        }
+
+        trainMarkov(tokens) {
+          for (let i = 0; i < tokens.length - 1; i++) {
+            const current = tokens[i];
+            const next = tokens[i + 1];
+            if (!this.markovDict[current]) this.markovDict[current] = [];
+            this.markovDict[current].push(next);
+          }
+        }
+
+        generateMarkov(startWord) {
+          if (!this.markovDict[startWord] || this.markovDict[startWord].length === 0) return null;
+          let current = startWord;
+          let result = [current];
+          for (let i = 0; i < 3; i++) {
+            const nextCandidates = this.markovDict[current];
+            if (!nextCandidates || nextCandidates.length === 0) break;
+            current = nextCandidates[Math.floor(Math.random() * nextCandidates.length)];
+            result.push(current);
+          }
+          return result.join('');
+        }
+
+        reply(input, lang = 'ja') {
+          this.state.turnCount++;
+          const activeLang = (lang === 'en') ? 'en' : 'ja';
+          const tokens = this.tokenize(input);
+          const keywords = this.extractKeywords(tokens);
+          this.trainMarkov(tokens);
+
+          // 1. パターンマッチ判定
+          const patterns = this.patternDict[activeLang] || [];
+          for (const item of patterns) {
+            if (item.pattern.test(input) && item.responses.length > 0) {
+              const idx = Math.floor(Math.random() * item.responses.length);
+              return item.responses[idx];
+            }
+          }
+
+          // トピックキーワード更新
+          if (keywords.length > 0) {
+            this.state.userTopic = keywords[Math.floor(Math.random() * keywords.length)];
+          }
+
+          // 2. 抽出トピックを使った返答 (確率 60%)
+          const tplList = this.templates[activeLang] || [];
+          if (this.state.userTopic && tplList.length > 0 && Math.random() < 0.6) {
+            const tpl = tplList[Math.floor(Math.random() * tplList.length)];
+            return tpl.replace("{topic}", this.state.userTopic);
+          }
+
+          // 3. マルコフ連鎖による簡易生成
+          if (activeLang === 'ja' && keywords.length > 0) {
+            const markovText = this.generateMarkov(keywords[0]);
+            if (markovText) return `${markovText}…って感じかな？`;
+          }
+
+          // 4. 相づち返答
+          const fillers = this.fillerResponses[activeLang] || ["うんうん、聞いてるよ！"];
+          return fillers[Math.floor(Math.random() * fillers.length)];
+        }
+      }
+
+      // 言語別 設定定義 (マージ済みデータを参照)
+      const langConfig = {
+        ja: {
+          recognitionLang: 'ja-JP',
+          scDefaultText: "ありがとうございます！",
+          scKeywords: aiData.scKeywords?.ja?.length ? aiData.scKeywords.ja : ["スパチャ", "スーパーチャット", "ありがとうございまーす", "ありがとうございます", "感謝"],
+          cutInRules: aiData.cutInRules?.ja?.length ? aiData.cutInRules.ja : [
+            { keywords: ["ここだ"], text: "ここだ！" },
+            { keywords: ["ここで決める", "これで決める"], text: "これで決める！" }
+          ]
+        },
+        en: {
+          recognitionLang: 'en-US',
+          scDefaultText: "THANK YOU SO MUCH!",
+          scKeywords: aiData.scKeywords?.en?.length ? aiData.scKeywords.en : ["super chat", "superchat", "thank you", "thanks for the support", "thanks"],
+          cutInRules: aiData.cutInRules?.en?.length ? aiData.cutInRules.en : [
+            { keywords: ["this is it", "here goes"], text: "THIS IS IT!" },
+            { keywords: ["finish this", "let's do this"], text: "LET'S DO THIS!" }
+          ]
+        }
+      };
+
+      // 音声・効果音の設定
+      const sePlayer = new Audio("剣を抜く.mp3");
+      sePlayer.volume = 0.5;
+
+      function playSuperChatSynthSE() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+
+        const ctx = new AudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const now = ctx.currentTime;
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(1.6, now);
+        masterGain.connect(ctx.destination);
+
+        // アルペジオベル
+        const bellFreqs = [523.25, 659.25, 783.99, 1046.5];
+        bellFreqs.forEach((freq, index) => {
+          const timeOffset = index * 0.05;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = index % 2 === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(freq, now + timeOffset);
+          osc.frequency.exponentialRampToValueAtTime(freq * 1.2, now + timeOffset + 0.5);
+
+          gain.gain.setValueAtTime(0.35, now + timeOffset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + timeOffset + 0.5);
+
+          osc.connect(gain);
+          gain.connect(masterGain);
+
+          osc.start(now + timeOffset);
+          osc.stop(now + timeOffset + 0.55);
+        });
+
+        // クラッカー破裂音
+        const bufferSize = ctx.sampleRate * 0.4;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+
+        const crackerNoise = ctx.createBufferSource();
+        crackerNoise.buffer = buffer;
+
+        const crackerFilter = ctx.createBiquadFilter();
+        crackerFilter.type = 'bandpass';
+        crackerFilter.frequency.setValueAtTime(1800, now);
+
+        const crackerGain = ctx.createGain();
+        crackerGain.gain.setValueAtTime(0.8, now);
+        crackerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        crackerNoise.connect(crackerFilter);
+        crackerFilter.connect(crackerGain);
+        crackerGain.connect(masterGain);
+
+        const crackerThump = ctx.createOscillator();
+        const thumpGain = ctx.createGain();
+        crackerThump.type = 'triangle';
+        crackerThump.frequency.setValueAtTime(250, now);
+        crackerThump.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+        thumpGain.gain.setValueAtTime(0.6, now);
+        thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+        crackerThump.connect(thumpGain);
+        thumpGain.connect(masterGain);
+
+        crackerNoise.start(now);
+        crackerThump.start(now);
+        crackerNoise.stop(now + 0.4);
+        crackerThump.stop(now + 0.4);
+
+        // シンバル音
+        const cymbalFreqs = [312, 520, 630, 810, 1150, 1400];
+        cymbalFreqs.forEach(f => {
+          const osc = ctx.createOscillator();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(f, now);
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.setValueAtTime(7500, now);
+
+          const cymbalGain = ctx.createGain();
+          cymbalGain.gain.setValueAtTime(0.25, now);
+          cymbalGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+          osc.connect(filter);
+          filter.connect(cymbalGain);
+          cymbalGain.connect(masterGain);
+
+          osc.start(now);
+          osc.stop(now + 1.3);
+        });
+      }
+
+      // 20秒無言検知・自動トーク機能
+      let silenceTimer = null;
+      const SILENCE_LIMIT = 20 * 1000; // 20秒
+
+      function resetSilenceTimer() {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(triggerSilenceTalk, SILENCE_LIMIT);
+      }
+
+      function triggerSilenceTalk() {
+        if (isSpeaking) {
+          resetSilenceTimer();
+          return;
+        }
+
+        const silencePhrases = aiData.silencePhrases || {};
+        if (silencePhrases[currentLang] && silencePhrases[currentLang].length > 0) {
+          const phrases = silencePhrases[currentLang];
+          const randomIndex = Math.floor(Math.random() * phrases.length);
+          runAssistantVoice(phrases[randomIndex], currentLang);
+        } else {
+          const fallbackText = getNextText();
+          if (fallbackText) runAssistantVoice(fallbackText, currentLang);
+        }
+      }
+
+      // カットイン表示機能
+      function executePhraseCutIn(text) {
+        const cutInBox = document.getElementById('phrase-cutin-box');
+        const cutInText = document.getElementById('phrase-text-content');
+
+        cutInText.innerText = text;
+        cutInBox.classList.remove('slide-in', 'slide-out');
+        void cutInBox.offsetWidth;
+        cutInBox.classList.add('slide-in');
+
+        setTimeout(() => {
+          try {
+            sePlayer.currentTime = 0;
+            sePlayer.play();
+          } catch (audioErr) { console.error(audioErr); }
+        }, 300);
+
+        setTimeout(() => {
+          cutInBox.classList.remove('slide-in');
+          cutInBox.classList.add('slide-out');
+          setTimeout(() => {
+            cutInBox.classList.remove('slide-out');
+          }, 300);
+        }, 3000);
+      }
+
+      // スパチャポップアップ表示機能
+      function triggerSuperChatEffects() {
+        const scBox = document.getElementById('sc-popup-box');
+        scBox.classList.add('show');
+        fireConfetti();
+
+        setTimeout(() => {
+          playSuperChatSynthSE();
+        }, 50);
+
+        setTimeout(() => {
+          scBox.classList.remove('show');
+        }, 4000);
+      }
+
+      // 紙吹雪パーティクルシステム
+      const canvas = document.getElementById('canvas-confetti');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+
+      let particles = [];
+      let animatingConfetti = false;
+
+      function fireConfetti() {
+        const colors = ['#ff4e50', '#f9d423', '#00f3ff', '#ffffff', '#ff00ff'];
+        particles = [];
+        for(let i=0; i<120; i++) {
+          particles.push({
+            x: canvas.width / 2,
+            y: canvas.height / 2 + 50,
+            r: Math.random() * 6 + 4,
+            dx: Math.random() * 30 - 15,
+            dy: Math.random() * -20 - 10,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            tilt: Math.floor(Math.random() * 10) - 10,
+            tiltAngle: 0,
+            tiltAngleInc: (Math.random() * 0.07) + 0.05
+          });
+        }
+        if(!animatingConfetti) animateConfetti();
+      }
+
+      function animateConfetti() {
+        animatingConfetti = true;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach((p, index) => {
+          p.tiltAngle += p.tiltAngleInc;
+          p.y += (Math.cos(p.tiltAngle) + 1 + p.r / 2) / 2;
+          p.x += Math.sin(p.tiltAngle) * 2;
+          p.dy += 0.4;
+          p.x += p.dx;
+          p.y += p.dy;
+
+          ctx.beginPath();
+          ctx.lineWidth = p.r;
+          ctx.strokeStyle = p.color;
+          ctx.moveTo(p.x + p.tilt + p.r, p.y);
+          ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
+          ctx.stroke();
+
+          if(p.y > canvas.height) {
+            particles.splice(index, 1);
+          }
+        });
+
+        if(particles.length > 0) {
+          requestAnimationFrame(animateConfetti);
+        } else {
+          animatingConfetti = false;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      // AI Assistant "Genis" (音声読み上げ & アバター制御)
+      let isSpeaking = false;
+      let currentLang = 'ja';
+      const synthesizer = window.speechSynthesis;
+
+      const avatarOrb = document.getElementById('avatar-orb');
+      const aiStatusMsg = document.getElementById('ai-status-msg');
+      const aiSubtitleBox = document.getElementById('ai-subtitle-box');
+      const toggleBtn = document.getElementById('toggle-avatar-btn');
+      const toggleLangBtn = document.getElementById('toggle-lang-btn');
+      const avatarFrame = document.getElementById('avatar-frame');
+
+      let orbPulseInterval = null;
+
+      speechSynthesis.getVoices();
+
+      // フレーズ群の準備 (マージ済みデータから取得)
+      const oncePhrases = JSON.parse(JSON.stringify(aiData.oncePhrases || { ja: [], en: [] }));
+      const loopPhrases = aiData.loopPhrases || { ja: [], en: [] };
+      const currentLoopDecks = { ja: [], en: [] };
+      const ONCE_PHRASE_CHANCE = 0.3;
+
+      function shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      }
+
+      function getNextText() {
+        const lang = currentLang;
+        const hasOnce = oncePhrases[lang] && oncePhrases[lang].length > 0;
+        const rollChance = Math.random() < ONCE_PHRASE_CHANCE;
+
+        if (hasOnce && rollChance) {
+          const index = Math.floor(Math.random() * oncePhrases[lang].length);
+          const selectedText = oncePhrases[lang][index];
+          oncePhrases[lang].splice(index, 1);
+          return selectedText;
+        }
+
+        if (!currentLoopDecks[lang] || currentLoopDecks[lang].length === 0) {
+          currentLoopDecks[lang] = shuffleArray(loopPhrases[lang] || []);
+        }
+
+        return currentLoopDecks[lang].pop() || "...";
+      }
+
+      toggleLangBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentLang === 'ja') {
+          currentLang = 'en';
+          toggleLangBtn.innerText = "LANG: EN";
+        } else {
+          currentLang = 'ja';
+          toggleLangBtn.innerText = "LANG: JA";
+        }
+        document.getElementById('sc-text-content').innerText = langConfig[currentLang].scDefaultText;
+        updateSpeechRecognitionLang();
+      });
+
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = avatarFrame.classList.toggle('element-hide');
+        aiStatusMsg.classList.toggle('element-hide');
+        toggleBtn.innerText = isHidden ? "AVATAR SHOW" : "AVATAR HIDE";
+      });
+
+      function updateAvatarState() {
+        clearInterval(orbPulseInterval);
+        if (isSpeaking) {
+          let isHighGlow = false;
+          orbPulseInterval = setInterval(() => {
+            isHighGlow = !isHighGlow;
+            if (isHighGlow) {
+              avatarOrb.classList.add('speaking-pulse');
+            } else {
+              avatarOrb.classList.remove('speaking-pulse');
+            }
+          }, 160);
+        } else {
+          avatarOrb.classList.remove('speaking-pulse');
+        }
+      }
+
+      function splitTextForGenis(text, lang) {
+        const chunks = [];
+        const isEnglish = (lang === 'en');
+        const maxLength = isEnglish ? 45 : 20;
+
+        let current = "";
+        for (let i = 0; i < text.length; i++) {
+          current += text[i];
+          const char = text[i];
+          const isBreakChar = (char === "、" || char === "。" || char === "！" || char === "？" || char === "," || char === "." || char === "!" || char === "?");
+
+          if (current.length >= maxLength || isBreakChar) {
+            chunks.push(current.trim());
+            current = "";
+          }
+        }
+        if (current) chunks.push(current.trim());
+        return chunks;
+      }
+
+      function runAssistantVoice(text, lang = currentLang) {
+        if (!synthesizer) return;
+        synthesizer.cancel();
+
+        isSpeaking = true;
+        aiStatusMsg.innerText = "SPEAKING";
+        updateAvatarState();
+
+        const chunks = splitTextForGenis(text, lang);
+        let chunkIndex = 0;
+
+        function speakNextChunk() {
+          if (chunkIndex >= chunks.length) {
+            isSpeaking = false;
+            aiStatusMsg.innerText = "STANDBY";
+            aiSubtitleBox.classList.remove('active');
+            updateAvatarState();
+            resetSilenceTimer();
+            return;
+          }
+
+          const currentChunk = chunks[chunkIndex];
+          aiSubtitleBox.innerText = currentChunk;
+          aiSubtitleBox.classList.add('active');
+
+          const utterance = new SpeechSynthesisUtterance(currentChunk);
+          utterance.lang = langConfig[lang].recognitionLang;
+
+          const voices = synthesizer.getVoices();
+          const voice = voices.find(v => v.lang.startsWith(lang));
+          if (voice) utterance.voice = voice;
+
+          utterance.onend = () => {
+            chunkIndex++;
+            speakNextChunk();
+          };
+
+          utterance.onerror = () => {
+            chunkIndex++;
+            speakNextChunk();
+          };
+
+          synthesizer.speak(utterance);
+        }
+
+        speakNextChunk();
+      }
+
+      // Web Speech API 音声認識機能
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      const nativeBot = new NativeBot(aiData);
+
+      function updateSpeechRecognitionLang() {
+        if (recognition) {
+          recognition.lang = langConfig[currentLang].recognitionLang;
+        }
+      }
+
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        updateSpeechRecognitionLang();
+
+        recognition.onresult = (event) => {
+          resetSilenceTimer();
+          const transcript = event.results[event.results.length - 1][0].transcript.trim();
+          if (!transcript) return;
+
+          const lowerText = transcript.toLowerCase();
+          const config = langConfig[currentLang];
+
+          // 1. スパチャ判定
+          const isSC = config.scKeywords.some(kw => lowerText.includes(kw.toLowerCase()));
+          if (isSC) {
+            triggerSuperChatEffects();
+          }
+
+          // 2. カットイン判定
+          for (const rule of config.cutInRules) {
+            if (rule.keywords.some(kw => lowerText.includes(kw.toLowerCase()))) {
+              executePhraseCutIn(rule.text);
+              break;
+            }
+          }
+
+          // 3. ボット返答生成・出力
+          const botReply = nativeBot.reply(transcript, currentLang);
+          runAssistantVoice(botReply, currentLang);
+        };
+
+        recognition.onend = () => {
+          try { recognition.start(); } catch (e) {}
+        };
+
+        recognition.onerror = (e) => {
+          console.warn("Speech Recognition Error:", e);
+        };
+      }
+
+      // 画面クリックで音声認識・タイマー開始
+      window.addEventListener('click', () => {
+        if (recognition) {
+          try { recognition.start(); } catch (e) {}
+        }
+        resetSilenceTimer();
+      }, { once: true });
+
+      resetSilenceTimer();
+    </script>
+  </body>
 </html>
