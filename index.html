@@ -682,7 +682,7 @@
         }
       }
 
-      function runAssistantVoice(fullText, lang) {
+      function runAssistantVoice(fullText, lang, suppressSilenceRestart = false) {
         if (synthesizer.speaking) synthesizer.cancel();
 
         const textForSpeech = fullText.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
@@ -695,7 +695,9 @@
         function playNextChunk() {
           if (currentChunkIndex >= subtitleChunks.length && currentChunkIndex >= speechChunks.length) {
             isSpeaking = false;
-            resetSilenceTimer();
+            if (!suppressSilenceRestart) {
+              resetSilenceTimer();
+            }
             updateAvatarState();
             aiStatusMsg.innerText = "STANDBY";
             aiSubtitleBox.classList.remove('active');
@@ -836,14 +838,14 @@
             console.log("形態素解析単語リスト:", tokenSurfaces);
           }
 
-          // ★「今は喋んなくていい」等の指示があった場合、2分タイマーをリセットして静かにする
+          // ★「今は喋んなくていい」等の指示があった場合：「はい」とだけ喋ったあと、20秒タイマーを起動させずに2分間完全沈黙にする
           const quietKeywords = ["今は喋んなくていい", "しゃべんなくていい", "喋らなくていい", "喋るな", "黙って", "静かにして", "静かに"];
           const isQuietRequested = quietKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
           if (isQuietRequested) {
             if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
             stopSilenceTimer();
-            resetTalkInterval(); // 2分後のタイマーをここから再スタートさせる
-            runAssistantVoice("はい。", currentLang);
+            resetTalkInterval(); // 2分後のタイマーをここから再スタート
+            runAssistantVoice("はい。", currentLang, true); // 第3引数trueで終了後の20秒タイマー再開をブロック
             return;
           }
 
