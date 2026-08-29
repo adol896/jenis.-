@@ -138,7 +138,7 @@
       }
     </style>
 
-    <!-- データファイルの読み込み -->
+    <!-- データファイルの読み込み[cite: 1] -->
     <script src="data.js"></script>
     <script src="data2.js"></script>
     <script src="kuromoji.js"></script>
@@ -174,7 +174,7 @@
 
     <script>
       // =========================================================
-      // Kuromoji 初期化
+      // Kuromoji 初期化[cite: 1]
       // =========================================================
       let tokenizerInstance = null;
 
@@ -190,7 +190,7 @@
       }
 
       // =========================================================
-      // データの統合処理 (data.js と data2.js をマージ)
+      // データの統合処理 (data.js と data2.js をマージ)[cite: 1]
       // =========================================================
       const rawData1 = window.AIData1 || window.AIData || {};
       const rawData2 = window.AIData2 || {};
@@ -249,7 +249,7 @@
       };
 
       // =========================================================
-      // 言語別 設定定義 (スパチャ・カットイン・音声認識)
+      // 言語別 設定定義[cite: 1]
       // =========================================================
       const langConfig = {
         ja: {
@@ -273,7 +273,7 @@
       };
 
       // =========================================================
-      // 音声・効果音（SE）の設定
+      // 音声・効果音（SE）の設定[cite: 1]
       // =========================================================
       const sePlayer = new Audio('./' + encodeURIComponent("剣を抜く.mp3"));
       sePlayer.volume = 0.7;
@@ -309,7 +309,6 @@
         masterGain.gain.setValueAtTime(1.6, now);
         masterGain.connect(ctx.destination);
 
-        // 音色1：アルペジオベル
         const bellFreqs = [523.25, 659.25, 783.99, 1046.5];
         bellFreqs.forEach((freq, index) => {
           const timeOffset = index * 0.05;
@@ -330,7 +329,6 @@
           osc.stop(now + timeOffset + 0.55);
         });
 
-        // 音色2：クラッカー破裂音
         const bufferSize = ctx.sampleRate * 0.4;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -367,7 +365,6 @@
         crackerNoise.stop(now + 0.4);
         crackerThump.stop(now + 0.4);
 
-        // 音色3：シンバル
         const cymbalFreqs = [312, 520, 630, 810, 1150, 1400];
         cymbalFreqs.forEach(f => {
           const osc = ctx.createOscillator();
@@ -409,7 +406,7 @@
       }
 
       // =========================================================
-      // 20秒無言検知・自動トーク機能
+      // 20秒無言検知・自動トーク機能[cite: 1]
       // =========================================================
       let silenceTimer = null;
       const SILENCE_LIMIT = 20 * 1000;
@@ -443,7 +440,7 @@
       }
 
       // =========================================================
-      // カットイン ＆ スパチャ演出 ＆ 紙吹雪機能
+      // カットイン ＆ スパチャ演出 ＆ 紙吹雪機能[cite: 1]
       // =========================================================
       async function executePhraseCutIn(text) {
         const cutInBox = document.getElementById('phrase-cutin-box');
@@ -488,7 +485,6 @@
         }, 4000);
       }
 
-      // 紙吹雪パーティクルシステム
       const canvas = document.getElementById('canvas-confetti');
       const ctx = canvas.getContext('2d');
       canvas.width = window.innerWidth;
@@ -554,7 +550,7 @@
       }
 
       // =========================================================
-      // AI Assistant "Genis" (音声読み上げ & アバター制御)
+      // AI Assistant "Genis" (音声読み上げ & アバター制御)[cite: 1]
       // =========================================================
       let isSpeaking = false;
       let currentLang = 'ja';
@@ -699,7 +695,7 @@
             updateAvatarState();
             aiStatusMsg.innerText = "STANDBY";
             aiSubtitleBox.classList.remove('active');
-            // ★ AIの喋りが完全に終わったので音声認識を自動再開
+            // AIの喋りが完全に終わったので音声認識を自動再開
             safeStartRecognition();
             return;
           }
@@ -755,11 +751,36 @@
       setInterval(() => { triggerTalk(); }, TALK_INTERVAL);
 
       // =========================================================
-      // 音声認識機能
+      // Wikipedia 連携・音声認識拡張機能
       // =========================================================
       let isRecognitionActive = false;
       let voiceRecognition = null;
-      let isCooldown = false; // 20秒待機用のフラグ
+
+      // Wikipedia関連の状態変数
+      let isWaitingWikiChoice = false;
+      let pendingWikiSummary = null;
+      let pendingWikiTitle = "";
+
+      async function fetchWikipediaSummary(title) {
+        const url = `https://ja.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&origin=*`;
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          const pages = data.query.pages;
+          const pageId = Object.keys(pages)[0];
+          if (pageId !== "-1" && pages[pageId].extract) {
+            let extract = pages[pageId].extract;
+            if (extract.length > 150) {
+              extract = extract.substring(0, 150) + "…";
+            }
+            return extract;
+          }
+          return null;
+        } catch (e) {
+          console.warn("Wikipedia API エラー:", e);
+          return null;
+        }
+      }
 
       const WebKitSpeech = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (WebKitSpeech) {
@@ -783,12 +804,6 @@
         };
 
         voiceRecognition.onresult = (event) => {
-          // 20秒待機中の場合は処理をスキップ
-          if (isCooldown) {
-            console.log("待機中（20秒間）のため応答をスキップします。");
-            return;
-          }
-
           resetSilenceTimer();
 
           const currentIndex = event.resultIndex;
@@ -797,7 +812,6 @@
 
           console.log("認識した言葉:", heardPhrase);
 
-          // Kuromojiによる形態素解析の実行
           let tokenSurfaces = [];
           if (tokenizerInstance) {
             const tokens = tokenizerInstance.tokenize(heardPhrase);
@@ -805,7 +819,7 @@
             console.log("形態素解析単語リスト:", tokenSurfaces);
           }
 
-          // 1. スパチャ判定
+          // 1. スパチャ判定[cite: 1]
           const isSC = config.scKeywords.some(keyword =>
             heardPhrase.includes(keyword.toLowerCase()) || tokenSurfaces.includes(keyword.toLowerCase())
           );
@@ -814,7 +828,7 @@
             return;
           }
 
-          // 2. カットイン判定
+          // 2. カットイン判定[cite: 1]
           for (const rule of config.cutInRules) {
             const matched = rule.keywords.some(kw =>
               heardPhrase.includes(kw.toLowerCase()) || tokenSurfaces.includes(kw.toLowerCase())
@@ -825,7 +839,7 @@
             }
           }
 
-          // 3. AI辞書（patternDict）のキーワード反応チェック
+          // 3. AI辞書（patternDict）のキーワード反応チェック[cite: 1]
           const patterns = aiData.patternDict?.[currentLang] || [];
           for (const item of patterns) {
             const regex = new RegExp(item.pattern, "i");
@@ -839,13 +853,36 @@
             }
           }
 
-          // --------------------------------------------------
-          // 4. 単語の一部をシンプルに復唱（応答後20秒待機）
-          // --------------------------------------------------
-          if (tokenizerInstance) {
+          // 4. Wikipedia結果の選択待ち判定（問いかけに対する返答）
+          if (isWaitingWikiChoice) {
+            const yesKeywords = ["はい", "お願いします", "聞いて", "おねがい", "ききたい", "yes", "sure", "ok"];
+            const noKeywords = ["いいえ", "結構", "やめとく", "いらない", "いいです", "no", "not now"];
+
+            const isYes = yesKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
+            const isNo = noKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
+
+            if (isYes) {
+              isWaitingWikiChoice = false;
+              const replyText = `${pendingWikiTitle}についてですね。 ${pendingWikiSummary}`;
+              pendingWikiSummary = null;
+              pendingWikiTitle = "";
+              if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
+              runAssistantVoice(replyText, currentLang);
+              return;
+            } else if (isNo) {
+              isWaitingWikiChoice = false;
+              pendingWikiSummary = null;
+              pendingWikiTitle = "";
+              if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
+              runAssistantVoice("わかりました。", currentLang);
+              return;
+            }
+          }
+
+          // 5. 名詞をとらえて復唱 ＆ Wikipedia調査・問いかけ機能
+          if (tokenizerInstance && !isWaitingWikiChoice) {
             const tokens = tokenizerInstance.tokenize(heardPhrase);
 
-            // 発話から意味のある名詞を抽出
             const validNouns = tokens.filter(t => {
               return t.pos === "名詞" &&
                      t.pos_detail_1 !== "代名詞" &&
@@ -855,35 +892,34 @@
             });
 
             if (validNouns.length > 0) {
-              // 発話の最後の方に出てきた主要単語を取得
               const targetWord = validNouns[validNouns.length - 1].surface_form;
+              pendingWikiTitle = targetWord;
 
-              // 短い復唱フレーズのバリエーション
               const echoTemplates = [
-                `${targetWord}、ですか？`,
-                `${targetWord}ですね。`,
-                `${targetWord}……？`
+                `${targetWord}、ですね。`,
+                `${targetWord}についてですね。`
               ];
               const echoReply = echoTemplates[Math.floor(Math.random() * echoTemplates.length)];
 
               if (voiceRecognition && isRecognitionActive) {
                 voiceRecognition.stop();
               }
-              runAssistantVoice(echoReply, currentLang);
 
-              // 20秒間の待機タイマーを設定
-              isCooldown = true;
-              console.log("6秒間の待機を開始します。");
-              setTimeout(() => {
-                isCooldown = false;
-                console.log("6秒間の待機が終了しました。認識を再開できます。");
-              }, 6000);
+              // Wikipediaで調べてから結果を聞くか問いかける
+              fetchWikipediaSummary(targetWord).then(summary => {
+                if (summary) {
+                  pendingWikiSummary = summary;
+                  isWaitingWikiChoice = true;
+                  const promptReply = `${echoReply} Wikipediaで調べてみました。結果を聞きますか？`;
+                  runAssistantVoice(promptReply, currentLang);
+                } else {
+                  runAssistantVoice(`${echoReply} ですが、Wikipediaの情報は見つかりませんでした。`, currentLang);
+                }
+              });
 
               return;
             }
           }
-
-          // どのパターンにも引っかからず単語も拾えなかった場合は発話せず静かに待機
         };
 
         updateSpeechRecognitionLang();
@@ -893,7 +929,6 @@
       }
 
       function safeStartRecognition() {
-        // ★ AIが発話中（isSpeaking === true）の間は音声認識を開始しない
         if (voiceRecognition && !isRecognitionActive && !isSpeaking) {
           try { voiceRecognition.start(); } catch (e) {}
         }
@@ -906,7 +941,6 @@
         safeStartRecognition();
       }
 
-      // 画面全体クリック時の処理
       document.body.addEventListener('click', (e) => {
         if (e.target === toggleBtn || e.target === toggleLangBtn) return;
 
@@ -918,3 +952,4 @@
     </script>
   </body>
 </html>
+```[cite: 1]
