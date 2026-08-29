@@ -426,6 +426,7 @@
           return;
         }
 
+        isAutomaticTalk = true; // 自動トークフラグをオン
         const silenceList = aiData.silencePhrases?.[currentLang] || [];
 
         if (silenceList.length > 0 && Math.random() < 0.5) {
@@ -556,6 +557,10 @@
       let currentLang = 'ja';
       const synthesizer = window.speechSynthesis;
       let availableVoices = [];
+
+      // 制御用フラグ
+      let isEchoWikiLocked = false;   // 復唱・Wikipedia調査機能のロック状態
+      let isAutomaticTalk = false;    // 現在の読み上げが自動トーク（定型文・無言トーク）かどうか
 
       function loadVoices() {
         if (synthesizer) {
@@ -695,7 +700,14 @@
             updateAvatarState();
             aiStatusMsg.innerText = "STANDBY";
             aiSubtitleBox.classList.remove('active');
-            // AIの喋りが完全に終わったので音声認識を自動再開
+
+            // ★ 自動トーク（定型文や無言トーク）が終了した場合のみ、復唱・Wikipedia調査機能を解放する
+            if (isAutomaticTalk) {
+              isEchoWikiLocked = false;
+              isAutomaticTalk = false;
+              console.log("定期的な自動トークが終了したため、復唱・Wikipedia調査機能が解放されました。");
+            }
+
             safeStartRecognition();
             return;
           }
@@ -743,6 +755,7 @@
 
       function triggerTalk() {
         if (isSpeaking) return;
+        isAutomaticTalk = true; // 定期トークのフラグをオン
         const selectedText = getNextText();
         runAssistantVoice(selectedText, currentLang);
       }
@@ -879,8 +892,8 @@
             }
           }
 
-          // 5. 名詞をとらえて復唱 ＆ Wikipedia調査・問いかけ機能
-          if (tokenizerInstance && !isWaitingWikiChoice) {
+          // 5. 名詞をとらえて復唱 ＆ Wikipedia調査・問いかけ機能（ロックされていない場合のみ実行）
+          if (tokenizerInstance && !isWaitingWikiChoice && !isEchoWikiLocked) {
             const tokens = tokenizerInstance.tokenize(heardPhrase);
 
             const validNouns = tokens.filter(t => {
@@ -916,6 +929,10 @@
                   runAssistantVoice(`${echoReply} ですが、Wikipediaの情報は見つかりませんでした。`, currentLang);
                 }
               });
+
+              // ★ 復唱・Wikipedia調査を行ったため、次回の自動トークが終わるまでロックする
+              isEchoWikiLocked = true;
+              console.log("復唱・Wikipedia調査を実行したため、次回の定期トークが終わるまで機能がロックされます。");
 
               return;
             }
