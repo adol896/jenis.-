@@ -426,7 +426,7 @@
           return;
         }
 
-        isAutomaticTalk = true; // 自動トークフラグをオン
+        isAutomaticTalk = true;
         const silenceList = aiData.silencePhrases?.[currentLang] || [];
 
         if (silenceList.length > 0 && Math.random() < 0.5) {
@@ -558,9 +558,8 @@
       const synthesizer = window.speechSynthesis;
       let availableVoices = [];
 
-      // 制御用フラグ
-      let isEchoWikiLocked = false;   // 復唱・Wikipedia調査機能のロック状態
-      let isAutomaticTalk = false;    // 現在の読み上げが自動トーク（定型文・無言トーク）かどうか
+      let isEchoWikiLocked = false;
+      let isAutomaticTalk = false;
 
       function loadVoices() {
         if (synthesizer) {
@@ -701,7 +700,6 @@
             aiStatusMsg.innerText = "STANDBY";
             aiSubtitleBox.classList.remove('active');
 
-            // ★ 自動トーク（定型文や無言トーク）が終了した場合のみ、復唱・Wikipedia調査機能を解放する
             if (isAutomaticTalk) {
               isEchoWikiLocked = false;
               isAutomaticTalk = false;
@@ -755,13 +753,20 @@
 
       function triggerTalk() {
         if (isSpeaking) return;
-        isAutomaticTalk = true; // 定期トークのフラグをオン
+        isAutomaticTalk = true;
         const selectedText = getNextText();
         runAssistantVoice(selectedText, currentLang);
       }
 
+      // 2分ごとの定期トーク管理
       const TALK_INTERVAL = 2 * 60 * 1000;
-      setInterval(() => { triggerTalk(); }, TALK_INTERVAL);
+      let talkIntervalId = null;
+
+      function resetTalkInterval() {
+        if (talkIntervalId) clearInterval(talkIntervalId);
+        talkIntervalId = setInterval(() => { triggerTalk(); }, TALK_INTERVAL);
+      }
+      resetTalkInterval(); // 初期化時にスタート
 
       // =========================================================
       // Wikipedia 連携・音声認識拡張機能
@@ -769,7 +774,6 @@
       let isRecognitionActive = false;
       let voiceRecognition = null;
 
-      // Wikipedia関連の状態変数
       let isWaitingWikiChoice = false;
       let pendingWikiSummary = null;
       let pendingWikiTitle = "";
@@ -830,6 +834,17 @@
             const tokens = tokenizerInstance.tokenize(heardPhrase);
             tokenSurfaces = tokens.map(t => t.surface_form);
             console.log("形態素解析単語リスト:", tokenSurfaces);
+          }
+
+          // ★「今は喋んなくていい」等の指示があった場合、2分タイマーをリセットして静かにする
+          const quietKeywords = ["今は喋んなくていい", "しゃべんなくていい", "喋らなくていい", "喋るな", "黙って", "静かにして", "静かに"];
+          const isQuietRequested = quietKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+          if (isQuietRequested) {
+            if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
+            stopSilenceTimer();
+            resetTalkInterval(); // 2分後のタイマーをここから再スタートさせる
+            runAssistantVoice("はい。", currentLang);
+            return;
           }
 
           // 1. スパチャ判定[cite: 1]
@@ -918,7 +933,6 @@
                 voiceRecognition.stop();
               }
 
-              // Wikipediaで調べてから結果を聞くか問いかける
               fetchWikipediaSummary(targetWord).then(summary => {
                 if (summary) {
                   pendingWikiSummary = summary;
@@ -930,7 +944,6 @@
                 }
               });
 
-              // ★ 復唱・Wikipedia調査を行ったため、次回の自動トークが終わるまでロックする
               isEchoWikiLocked = true;
               console.log("復唱・Wikipedia調査を実行したため、次回の定期トークが終わるまで機能がロックされます。");
 
