@@ -859,8 +859,8 @@
 
           // 「話しかけてもいいですか？」への返答待ち
           if (isForceMuted && isWaitingPermissionResponse) {
-            const isYes = ["はい", "いいよ", "どうぞ", "話して", "喋って", "ok", "yes"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
-            const isNoOrYet = ["いいえ", "まだ", "ダメ", "だめ", "しばらく", "no", "not yet"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+            const isYes = ["はい", "いいよ", "どうぞ", "話して", "喋って", "ok", "yes"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
+            const isNoOrYet = ["いいえ", "まだ", "ダメ", "だめ", "しばらく", "no", "not yet"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
 
             if (isYes) {
               isForceMuted = false;
@@ -881,7 +881,7 @@
 
           // 一般的な解除キーワードの判定
           const resumeKeywords = ["話そうぜ", "喋ってくれ", "一旦喋ってくれ", "いいよ", "もういいよ", "再開", "おしゃべり再開", "話して"];
-          const isResumeRequested = resumeKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+          const isResumeRequested = resumeKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
           if (isForceMuted && isResumeRequested) {
             isForceMuted = false;
             isWaitingPermissionResponse = false;
@@ -899,13 +899,13 @@
 
           resetSilenceTimer();
 
-          // 停止（静寂）キーワードの判定
+          // 停止（静寂）キーワードの判定（誤爆防止のため、完全一致か単語一致に変更）
           const quietKeywords = [
             "今話さなくていいよ", "今話さなくていい", "今は喋んなくていい", "しゃべんなくていい", 
             "喋らなくていい", "喋るな", "一旦黙れ", "一旦喋るのやめてくれ", "喋るのやめて", 
             "黙って", "静かにして", "静かに", "ちょっと黙って"
           ];
-          const isQuietRequested = quietKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+          const isQuietRequested = quietKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
           if (isQuietRequested) {
             isForceMuted = true;
             if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
@@ -950,7 +950,7 @@
             }
           }
 
-          // 4. ★「〜について調べて」「〜を調べて」の明示的な指示の判定
+          // 4. 「〜について調べて」「〜を調べて」の明示的な指示の判定
           const searchMatch = heardPhrase.match(/(.+)について調べて|(.+)を調べて/);
           if (searchMatch) {
             const targetWord = (searchMatch[1] || searchMatch[2]).trim();
@@ -974,8 +974,8 @@
             const yesKeywords = ["はい", "お願いします", "聞いて", "おねがい", "ききたい", "yes", "sure", "ok"];
             const noKeywords = ["いいえ", "結構", "やめとく", "いらない", "いいです", "no", "not now"];
 
-            const isYes = yesKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
-            const isNo = noKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+            const isYes = yesKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
+            const isNo = noKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
 
             if (isYes) {
               isWaitingWikiChoice = false;
