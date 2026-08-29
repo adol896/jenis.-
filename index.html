@@ -406,10 +406,10 @@
       }
 
       // =========================================================
-      // 強制停止モード（初期状態はON：喋る機能全停止）の管理フラグ[cite: 1]
+      // 強制停止モード・権限確認の管理フラグ[cite: 1]
       // =========================================================
       let isForceMuted = true;
-      let isWaitingPermissionResponse = false; // 「話しかけてもいいですか？」の返答待ち状態
+      let isWaitingPermissionResponse = false;
 
       // =========================================================
       // 20秒無言検知・自動トーク機能[cite: 1]
@@ -768,7 +768,6 @@
         runAssistantVoice(selectedText, currentLang);
       }
 
-      // 2分ごとの定期トーク管理[cite: 1]
       const TALK_INTERVAL = 2 * 60 * 1000;
       let talkIntervalId = null;
 
@@ -777,9 +776,6 @@
         talkIntervalId = setInterval(() => { triggerTalk(); }, TALK_INTERVAL);
       }
 
-      // =========================================================
-      // 起動から2分後に「話しかけてもいいですか？」と尋ねるタイマー
-      // =========================================================
       let initialPermissionTimer = null;
       function startInitialPermissionTimer() {
         if (initialPermissionTimer) clearTimeout(initialPermissionTimer);
@@ -793,7 +789,6 @@
         }, 2 * 60 * 1000);
       }
 
-      // 起動直後からミュート状態で2分タイマーを開始
       startInitialPermissionTimer();
 
       // =========================================================
@@ -862,7 +857,7 @@
             console.log("形態素解析単語リスト:", tokenSurfaces);
           }
 
-          // ★「話しかけてもいいですか？」への返答待ち（「はい」「いいえ」「まだ」の判定）
+          // 「話しかけてもいいですか？」への返答待ち
           if (isForceMuted && isWaitingPermissionResponse) {
             const isYes = ["はい", "いいよ", "どうぞ", "話して", "喋って", "ok", "yes"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
             const isNoOrYet = ["いいえ", "まだ", "ダメ", "だめ", "しばらく", "no", "not yet"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
@@ -879,13 +874,12 @@
             } else if (isNoOrYet) {
               isWaitingPermissionResponse = false;
               runAssistantVoice("わかりました。ではまた後ほど聞いてみますね。", currentLang, true);
-              // さらに2分後に再度聞いてみる
               startInitialPermissionTimer();
               return;
             }
           }
 
-          // ★ 一般的な解除キーワードの判定
+          // 一般的な解除キーワードの判定
           const resumeKeywords = ["話そうぜ", "喋ってくれ", "一旦喋ってくれ", "いいよ", "もういいよ", "再開", "おしゃべり再開", "話して"];
           const isResumeRequested = resumeKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
           if (isForceMuted && isResumeRequested) {
@@ -899,15 +893,13 @@
             return;
           }
 
-          // ★ 停止モード中（isForceMuted === true）のときは、上記の返答や解除ワード以外は何もしない
           if (isForceMuted) {
             return;
           }
 
-          // 通常時は発言があったら20秒タイマーをリセット
           resetSilenceTimer();
 
-          // ★ 停止（静寂）キーワードの判定
+          // 停止（静寂）キーワードの判定
           const quietKeywords = [
             "今話さなくていいよ", "今話さなくていい", "今は喋んなくていい", "しゃべんなくていい", 
             "喋らなくていい", "喋るな", "一旦黙れ", "一旦喋るのやめてくれ", "喋るのやめて", 
@@ -920,7 +912,6 @@
             stopSilenceTimer();
             aiStatusMsg.innerText = "MUTED";
             runAssistantVoice("はい、静かにします。", currentLang, true);
-            // また2分後に「話しかけてもいいですか？」と聞くように設定
             startInitialPermissionTimer();
             return;
           }
@@ -959,7 +950,26 @@
             }
           }
 
-          // 4. Wikipedia結果の選択待ち判定
+          // 4. ★「〜について調べて」「〜を調べて」の明示的な指示の判定
+          const searchMatch = heardPhrase.match(/(.+)について調べて|(.+)を調べて/);
+          if (searchMatch) {
+            const targetWord = (searchMatch[1] || searchMatch[2]).trim();
+            if (targetWord) {
+              if (voiceRecognition && isRecognitionActive) {
+                voiceRecognition.stop();
+              }
+              fetchWikipediaSummary(targetWord).then(summary => {
+                if (summary) {
+                  runAssistantVoice(`${targetWord}についてですね。調べましたよ。 ${summary}`, currentLang);
+                } else {
+                  runAssistantVoice(`${targetWord}について調べてみましたが、詳細な情報は見つかりませんでした。`, currentLang);
+                }
+              });
+              return;
+            }
+          }
+
+          // 5. Wikipedia結果の選択待ち判定
           if (isWaitingWikiChoice) {
             const yesKeywords = ["はい", "お願いします", "聞いて", "おねがい", "ききたい", "yes", "sure", "ok"];
             const noKeywords = ["いいえ", "結構", "やめとく", "いらない", "いいです", "no", "not now"];
@@ -985,7 +995,7 @@
             }
           }
 
-          // 5. 名詞をとらえて復唱 ＆ Wikipedia調査・問いかけ機能
+          // 6. 名詞をとらえて復唱 ＆ Wikipedia調査・自動提案機能
           if (tokenizerInstance && !isWaitingWikiChoice && !isEchoWikiLocked) {
             const tokens = tokenizerInstance.tokenize(heardPhrase);
 
