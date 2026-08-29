@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Assistant "Genis" & Multi-Lang SuperChat Overlay</title>
     <style>
-      /* ベーススタイル */
+      /* ベーススタイル[cite: 1] */
       html, body {
           margin: 0; padding: 0; width: 100%; height: 100%;
-          background-color: #00FF00; overflow: hidden; /* OBSのクロマキー(Green)用 */
+          background-color: #00FF00; overflow: hidden; /* OBSのクロマキー(Green)用[cite: 1] */
           font-family: 'Helvetica Neue', Arial, sans-serif; color: #ffffff;
       }
 
-      /* [1] AI Assistant (Genis) UI */
+      /* [1] AI Assistant (Genis) UI[cite: 1] */
       #assistant-container {
           position: absolute; bottom: -20px; left: 10px;
           display: flex; flex-direction: column; align-items: center; z-index: 10;
@@ -79,7 +79,7 @@
       }
       #ai-subtitle-box.active { opacity: 1; transform: translate(-50%, 0); }
 
-      /* [2] カットイン・スパチャ演出 UI */
+      /* [2] カットイン・スパチャ演出 UI[cite: 1] */
       #phrase-cutin-box {
           position: absolute; top: 45%; left: 50%;
           width: 90%; max-width: 600px; height: 110px;
@@ -144,30 +144,30 @@
     <script src="kuromoji.js"></script>
   </head>
   <body>
-    <!-- 紙吹雪用キャンバス -->
+    <!-- 紙吹雪用キャンバス[cite: 1] -->
     <canvas id="canvas-confetti"></canvas>
 
-    <!-- AI アバター ＆ 操作UI -->
+    <!-- AI アバター ＆ 操作UI[cite: 1] -->
     <div id="assistant-container">
       <div id="avatar-frame">
         <div id="avatar-orb"></div>
       </div>
-      <div id="ai-status-msg">STANDBY</div>
+      <div id="ai-status-msg">MUTED</div>
       <div class="controls-row">
         <button id="toggle-lang-btn" class="ui-btn">LANG: JA</button>
         <button id="toggle-avatar-btn" class="ui-btn">AVATAR HIDE</button>
       </div>
     </div>
 
-    <!-- AI 字幕ボックス -->
+    <!-- AI 字幕ボックス[cite: 1] -->
     <div id="ai-subtitle-box">...</div>
 
-    <!-- 通常ワードカットイン -->
+    <!-- 通常ワードカットイン[cite: 1] -->
     <div id="phrase-cutin-box">
       <div id="phrase-text-content"></div>
     </div>
 
-    <!-- スパチャポップアップ -->
+    <!-- スパチャポップアップ[cite: 1] -->
     <div id="sc-popup-box">
       <div id="sc-text-content">ありがとうございます！</div>
     </div>
@@ -406,12 +406,19 @@
       }
 
       // =========================================================
+      // 強制停止モード（初期状態はON：喋る機能全停止）の管理フラグ[cite: 1]
+      // =========================================================
+      let isForceMuted = true;
+      let isWaitingPermissionResponse = false; // 「話しかけてもいいですか？」の返答待ち状態
+
+      // =========================================================
       // 20秒無言検知・自動トーク機能[cite: 1]
       // =========================================================
       let silenceTimer = null;
       const SILENCE_LIMIT = 20 * 1000;
 
       function resetSilenceTimer() {
+        if (isForceMuted) return;
         if (silenceTimer) clearTimeout(silenceTimer);
         silenceTimer = setTimeout(triggerSilenceTalk, SILENCE_LIMIT);
       }
@@ -421,7 +428,7 @@
       }
 
       function triggerSilenceTalk() {
-        if (isSpeaking) {
+        if (isForceMuted || isSpeaking) {
           resetSilenceTimer();
           return;
         }
@@ -444,6 +451,7 @@
       // カットイン ＆ スパチャ演出 ＆ 紙吹雪機能[cite: 1]
       // =========================================================
       async function executePhraseCutIn(text) {
+        if (isForceMuted) return;
         const cutInBox = document.getElementById('phrase-cutin-box');
         const cutInText = document.getElementById('phrase-text-content');
 
@@ -472,6 +480,7 @@
       }
 
       function triggerSuperChatEffects() {
+        if (isForceMuted) return;
         const scBox = document.getElementById('sc-popup-box');
         scBox.classList.add('show');
 
@@ -682,7 +691,7 @@
         }
       }
 
-      function runAssistantVoice(fullText, lang, suppressSilenceRestart = false) {
+      function runAssistantVoice(fullText, lang, suppressSilenceRestart = false, bypassMute = false) {
         if (synthesizer.speaking) synthesizer.cancel();
 
         const textForSpeech = fullText.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
@@ -695,17 +704,16 @@
         function playNextChunk() {
           if (currentChunkIndex >= subtitleChunks.length && currentChunkIndex >= speechChunks.length) {
             isSpeaking = false;
-            if (!suppressSilenceRestart) {
+            if (!suppressSilenceRestart && !isForceMuted) {
               resetSilenceTimer();
             }
             updateAvatarState();
-            aiStatusMsg.innerText = "STANDBY";
+            aiStatusMsg.innerText = isForceMuted ? "MUTED" : "STANDBY";
             aiSubtitleBox.classList.remove('active');
 
             if (isAutomaticTalk) {
               isEchoWikiLocked = false;
               isAutomaticTalk = false;
-              console.log("定期的な自動トークが終了したため、復唱・Wikipedia調査機能が解放されました。");
             }
 
             safeStartRecognition();
@@ -754,13 +762,13 @@
       }
 
       function triggerTalk() {
-        if (isSpeaking) return;
+        if (isForceMuted || isSpeaking) return;
         isAutomaticTalk = true;
         const selectedText = getNextText();
         runAssistantVoice(selectedText, currentLang);
       }
 
-      // 2分ごとの定期トーク管理
+      // 2分ごとの定期トーク管理[cite: 1]
       const TALK_INTERVAL = 2 * 60 * 1000;
       let talkIntervalId = null;
 
@@ -768,10 +776,28 @@
         if (talkIntervalId) clearInterval(talkIntervalId);
         talkIntervalId = setInterval(() => { triggerTalk(); }, TALK_INTERVAL);
       }
-      resetTalkInterval(); // 初期化時にスタート
 
       // =========================================================
-      // Wikipedia 連携・音声認識拡張機能
+      // 起動から2分後に「話しかけてもいいですか？」と尋ねるタイマー
+      // =========================================================
+      let initialPermissionTimer = null;
+      function startInitialPermissionTimer() {
+        if (initialPermissionTimer) clearTimeout(initialPermissionTimer);
+        initialPermissionTimer = setTimeout(() => {
+          if (isForceMuted) {
+            isWaitingPermissionResponse = true;
+            aiStatusMsg.innerText = "WAITING";
+            const promptText = (currentLang === 'en') ? "May I speak to you now?" : "話しかけてもいいですか？";
+            runAssistantVoice(promptText, currentLang, true, true);
+          }
+        }, 2 * 60 * 1000);
+      }
+
+      // 起動直後からミュート状態で2分タイマーを開始
+      startInitialPermissionTimer();
+
+      // =========================================================
+      // Wikipedia 連携・音声認識拡張機能[cite: 1]
       // =========================================================
       let isRecognitionActive = false;
       let voiceRecognition = null;
@@ -823,8 +849,6 @@
         };
 
         voiceRecognition.onresult = (event) => {
-          resetSilenceTimer();
-
           const currentIndex = event.resultIndex;
           const heardPhrase = event.results[currentIndex][0].transcript.trim().toLowerCase();
           const config = langConfig[currentLang];
@@ -838,14 +862,66 @@
             console.log("形態素解析単語リスト:", tokenSurfaces);
           }
 
-          // ★「今は喋んなくていい」等の指示があった場合：「はい」とだけ喋ったあと、20秒タイマーを起動させずに2分間完全沈黙にする
-          const quietKeywords = ["今は喋んなくていい", "しゃべんなくていい", "喋らなくていい", "喋るな", "黙って", "静かにして", "静かに"];
+          // ★「話しかけてもいいですか？」への返答待ち（「はい」「いいえ」「まだ」の判定）
+          if (isForceMuted && isWaitingPermissionResponse) {
+            const isYes = ["はい", "いいよ", "どうぞ", "話して", "喋って", "ok", "yes"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+            const isNoOrYet = ["いいえ", "まだ", "ダメ", "だめ", "しばらく", "no", "not yet"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+
+            if (isYes) {
+              isForceMuted = false;
+              isWaitingPermissionResponse = false;
+              stopSilenceTimer();
+              resetSilenceTimer();
+              resetTalkInterval();
+              aiStatusMsg.innerText = "STANDBY";
+              runAssistantVoice("分かりました！お話ししましょう。", currentLang);
+              return;
+            } else if (isNoOrYet) {
+              isWaitingPermissionResponse = false;
+              runAssistantVoice("わかりました。ではまた後ほど聞いてみますね。", currentLang, true);
+              // さらに2分後に再度聞いてみる
+              startInitialPermissionTimer();
+              return;
+            }
+          }
+
+          // ★ 一般的な解除キーワードの判定
+          const resumeKeywords = ["話そうぜ", "喋ってくれ", "一旦喋ってくれ", "いいよ", "もういいよ", "再開", "おしゃべり再開", "話して"];
+          const isResumeRequested = resumeKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+          if (isForceMuted && isResumeRequested) {
+            isForceMuted = false;
+            isWaitingPermissionResponse = false;
+            stopSilenceTimer();
+            resetSilenceTimer();
+            resetTalkInterval();
+            aiStatusMsg.innerText = "STANDBY";
+            runAssistantVoice("おっ、分かりました！またお話ししましょう。", currentLang);
+            return;
+          }
+
+          // ★ 停止モード中（isForceMuted === true）のときは、上記の返答や解除ワード以外は何もしない
+          if (isForceMuted) {
+            return;
+          }
+
+          // 通常時は発言があったら20秒タイマーをリセット
+          resetSilenceTimer();
+
+          // ★ 停止（静寂）キーワードの判定
+          const quietKeywords = [
+            "今話さなくていいよ", "今話さなくていい", "今は喋んなくていい", "しゃべんなくていい", 
+            "喋らなくていい", "喋るな", "一旦黙れ", "一旦喋るのやめてくれ", "喋るのやめて", 
+            "黙って", "静かにして", "静かに", "ちょっと黙って"
+          ];
           const isQuietRequested = quietKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
           if (isQuietRequested) {
+            isForceMuted = true;
             if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
             stopSilenceTimer();
-            resetTalkInterval(); // 2分後のタイマーをここから再スタート
-            runAssistantVoice("はい。", currentLang, true); // 第3引数trueで終了後の20秒タイマー再開をブロック
+            aiStatusMsg.innerText = "MUTED";
+            runAssistantVoice("はい、静かにします。", currentLang, true);
+            // また2分後に「話しかけてもいいですか？」と聞くように設定
+            startInitialPermissionTimer();
             return;
           }
 
@@ -883,13 +959,13 @@
             }
           }
 
-          // 4. Wikipedia結果の選択待ち判定（問いかけに対する返答）
+          // 4. Wikipedia結果の選択待ち判定
           if (isWaitingWikiChoice) {
             const yesKeywords = ["はい", "お願いします", "聞いて", "おねがい", "ききたい", "yes", "sure", "ok"];
             const noKeywords = ["いいえ", "結構", "やめとく", "いらない", "いいです", "no", "not now"];
 
-            const isYes = yesKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
-            const isNo = noKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
+            const isYes = yesKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
+            const isNo = noKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.some(s => kw.includes(s)));
 
             if (isYes) {
               isWaitingWikiChoice = false;
@@ -909,7 +985,7 @@
             }
           }
 
-          // 5. 名詞をとらえて復唱 ＆ Wikipedia調査・問いかけ機能（ロックされていない場合のみ実行）
+          // 5. 名詞をとらえて復唱 ＆ Wikipedia調査・問いかけ機能
           if (tokenizerInstance && !isWaitingWikiChoice && !isEchoWikiLocked) {
             const tokens = tokenizerInstance.tokenize(heardPhrase);
 
@@ -947,15 +1023,13 @@
               });
 
               isEchoWikiLocked = true;
-              console.log("復唱・Wikipedia調査を実行したため、次回の定期トークが終わるまで機能がロックされます。");
-
               return;
             }
           }
         };
 
         updateSpeechRecognitionLang();
-        setInterval(() => { if (!isRecognitionActive) safeStartRecognition(); }, 1000);
+        setInterval(() => { if (!isRecognitionActive && !isForceMuted) safeStartRecognition(); }, 1000);
       } else {
         console.warn("Speech API 非対応ブラウザです。Chrome等を使用してください。");
       }
@@ -975,6 +1049,7 @@
 
       document.body.addEventListener('click', (e) => {
         if (e.target === toggleBtn || e.target === toggleLangBtn) return;
+        if (isForceMuted) return;
 
         unlockAudio();
         safeStartRecognition();
