@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Assistant "Genis" & Multi-Lang SuperChat & Hyrule Compendium Overlay</title>
+    <title>AI Assistant "Genis" & Multi-Lang SuperChat & Wiki Overlay</title>
     <style>
-      /* ベーススタイル[span_0](start_span)[span_0](end_span)[span_1](start_span)[span_1](end_span) */
+      /* ベーススタイル */
       html, body {
           margin: 0; padding: 0; width: 100%; height: 100%;
-          background-color: #00FF00; overflow: hidden; /* OBSのクロマキー(Green)用[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span) */
+          background-color: #00FF00; overflow: hidden;
           font-family: 'Helvetica Neue', Arial, sans-serif; color: #ffffff;
       }
 
-      /* [1] AI Assistant (Genis) UI[span_4](start_span)[span_4](end_span)[span_5](start_span)[span_5](end_span) */
+      /* [1] AI Assistant (Genis) UI */
       #assistant-container {
           position: absolute; bottom: -20px; left: 10px;
           display: flex; flex-direction: column; align-items: center; z-index: 10;
@@ -79,7 +79,7 @@
       }
       #ai-subtitle-box.active { opacity: 1; transform: translate(-50%, 0); }
 
-      /* [2] カットイン・スパチャ演出 UI[span_6](start_span)[span_6](end_span) */
+      /* [2] カットイン・スパチャ演出 UI */
       #phrase-cutin-box {
           position: absolute; top: 45%; left: 50%;
           width: 90%; max-width: 600px; height: 110px;
@@ -138,16 +138,14 @@
       }
     </style>
 
-    <!-- データファイルの読み込み[span_7](start_span)[span_7](end_span) -->
+    <!-- データファイルの読み込み[span_1](start_span)[span_1](end_span) -->
     <script src="data.js"></script>
     <script src="data2.js"></script>
     <script src="kuromoji.js"></script>
   </head>
   <body>
-    <!-- 紙吹雪用キャンバス[span_8](start_span)[span_8](end_span) -->
     <canvas id="canvas-confetti"></canvas>
 
-    <!-- AI アバター ＆ 操作UI[span_9](start_span)[span_9](end_span)[span_10](start_span)[span_10](end_span) -->
     <div id="assistant-container">
       <div id="avatar-frame">
         <div id="avatar-orb"></div>
@@ -159,22 +157,19 @@
       </div>
     </div>
 
-    <!-- AI 字幕ボックス[span_11](start_span)[span_11](end_span)[span_12](start_span)[span_12](end_span) -->
     <div id="ai-subtitle-box">...</div>
 
-    <!-- 通常ワードカットイン[span_13](start_span)[span_13](end_span) -->
     <div id="phrase-cutin-box">
       <div id="phrase-text-content"></div>
     </div>
 
-    <!-- スパチャポップアップ[span_14](start_span)[span_14](end_span) -->
     <div id="sc-popup-box">
       <div id="sc-text-content">ありがとうございます！</div>
     </div>
 
     <script>
       // =========================================================
-      // Kuromoji 初期化[span_15](start_span)[span_15](end_span)
+      // Kuromoji 初期化[span_2](start_span)[span_2](end_span)
       // =========================================================
       let tokenizerInstance = null;
 
@@ -190,7 +185,7 @@
       }
 
       // =========================================================
-      // データの統合処理 (data.js と data2.js をマージ)[span_16](start_span)[span_16](end_span)
+      // データの統合処理
       // =========================================================
       const rawData1 = window.AIData1 || window.AIData || {};
       const rawData2 = window.AIData2 || {};
@@ -248,9 +243,6 @@
         en: aiData.loopPhrases.en.length > 0 ? aiData.loopPhrases.en : defaultLoopPhrases.en
       };
 
-      // =========================================================
-      // 言語別 設定定義[span_17](start_span)[span_17](end_span)
-      // =========================================================
       const langConfig = {
         ja: {
           recognitionLang: 'ja-JP',
@@ -272,9 +264,6 @@
         }
       };
 
-      // =========================================================
-      // 音声・効果音（SE）の設定[span_18](start_span)[span_18](end_span)
-      // =========================================================
       const sePlayer = new Audio('./' + encodeURIComponent("剣を抜く.mp3"));
       sePlayer.volume = 0.7;
 
@@ -282,7 +271,6 @@
 
       function unlockAudio() {
         if (isAudioUnlocked) return;
-
         sePlayer.volume = 0;
         sePlayer.play().then(() => {
           sePlayer.pause();
@@ -291,21 +279,14 @@
           isAudioUnlocked = true;
           isForceMuted = false;
           aiStatusMsg.innerText = "STANDBY";
-          console.log("SE のオーディオ再生制限を解除しました。");
-        }).catch((err) => {
-          console.warn("オーディオアンロック失敗:", err);
-        });
+        }).catch((err) => {});
       }
 
       function playSuperChatSynthSE() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
-
         const ctx = new AudioContext();
-        if (ctx.state === 'suspended') {
-          ctx.resume();
-        }
-
+        if (ctx.state === 'suspended') { ctx.resume(); }
         const now = ctx.currentTime;
         const masterGain = ctx.createGain();
         masterGain.gain.setValueAtTime(1.6, now);
@@ -316,106 +297,20 @@
           const timeOffset = index * 0.05;
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
-
           osc.type = index % 2 === 0 ? 'sine' : 'triangle';
           osc.frequency.setValueAtTime(freq, now + timeOffset);
-          osc.frequency.exponentialRampToValueAtTime(freq * 1.2, now + timeOffset + 0.5);
-
           gain.gain.setValueAtTime(0.35, now + timeOffset);
           gain.gain.exponentialRampToValueAtTime(0.001, now + timeOffset + 0.5);
-
           osc.connect(gain);
           gain.connect(masterGain);
-
           osc.start(now + timeOffset);
           osc.stop(now + timeOffset + 0.55);
         });
-
-        const bufferSize = ctx.sampleRate * 0.4;
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
-
-        const crackerNoise = ctx.createBufferSource();
-        crackerNoise.buffer = buffer;
-
-        const crackerFilter = ctx.createBiquadFilter();
-        crackerFilter.type = 'bandpass';
-        crackerFilter.frequency.setValueAtTime(1800, now);
-
-        const crackerGain = ctx.createGain();
-        crackerGain.gain.setValueAtTime(0.8, now);
-        crackerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
-        crackerNoise.connect(crackerFilter);
-        crackerFilter.connect(crackerGain);
-        crackerGain.connect(masterGain);
-
-        const crackerThump = ctx.createOscillator();
-        const thumpGain = ctx.createGain();
-        crackerThump.type = 'triangle';
-        crackerThump.frequency.setValueAtTime(250, now);
-        crackerThump.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-        thumpGain.gain.setValueAtTime(0.6, now);
-        thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-
-        crackerThump.connect(thumpGain);
-        thumpGain.connect(masterGain);
-
-        crackerNoise.start(now);
-        crackerThump.start(now);
-        crackerNoise.stop(now + 0.4);
-        crackerThump.stop(now + 0.4);
-
-        const cymbalFreqs = [312, 520, 630, 810, 1150, 1400];
-        cymbalFreqs.forEach(f => {
-          const osc = ctx.createOscillator();
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(f, now);
-
-          const filter = ctx.createBiquadFilter();
-          filter.type = 'highpass';
-          filter.frequency.setValueAtTime(7500, now);
-
-          const cymbalGain = ctx.createGain();
-          cymbalGain.gain.setValueAtTime(0.25, now);
-          cymbalGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-
-          osc.connect(filter);
-          filter.connect(cymbalGain);
-          cymbalGain.connect(masterGain);
-
-          osc.start(now);
-          osc.stop(now + 1.3);
-        });
-
-        const cymbalNoise = ctx.createBufferSource();
-        cymbalNoise.buffer = buffer;
-        const cymbalNoiseFilter = ctx.createBiquadFilter();
-        cymbalNoiseFilter.type = 'highpass';
-        cymbalNoiseFilter.frequency.setValueAtTime(8500, now);
-
-        const cymbalNoiseGain = ctx.createGain();
-        cymbalNoiseGain.gain.setValueAtTime(0.35, now);
-        cymbalNoiseGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
-
-        cymbalNoise.connect(cymbalNoiseFilter);
-        cymbalNoiseFilter.connect(cymbalNoiseGain);
-        cymbalNoiseGain.connect(masterGain);
-
-        cymbalNoise.start(now);
-        cymbalNoise.stop(now + 1.1);
       }
 
-      // =========================================================
-      // 強制停止モード・権限確認の管理フラグ[span_19](start_span)[span_19](end_span)
-      // =========================================================
       let isForceMuted = true;
       let isWaitingPermissionResponse = false;
 
-      // =========================================================
-      // 20秒無言検知・自動トーク機能[span_20](start_span)[span_20](end_span)
-      // =========================================================
       let silenceTimer = null;
       const SILENCE_LIMIT = 20 * 1000;
 
@@ -434,50 +329,33 @@
           resetSilenceTimer();
           return;
         }
-
         isAutomaticTalk = true;
         const silenceList = aiData.silencePhrases?.[currentLang] || [];
-
         if (silenceList.length > 0 && Math.random() < 0.5) {
           const randomIndex = Math.floor(Math.random() * silenceList.length);
           runAssistantVoice(silenceList[randomIndex], currentLang);
         } else {
           const nextText = getNextText();
-          if (nextText) {
-            runAssistantVoice(nextText, currentLang);
-          }
+          if (nextText) { runAssistantVoice(nextText, currentLang); }
         }
       }
 
-      // =========================================================
-      // カットイン ＆ スパチャ演出 ＆ 紙吹雪機能[span_21](start_span)[span_21](end_span)
-      // =========================================================
       async function executePhraseCutIn(text) {
         if (isForceMuted) return;
         const cutInBox = document.getElementById('phrase-cutin-box');
         const cutInText = document.getElementById('phrase-text-content');
-
         cutInText.innerText = text;
-
         cutInBox.classList.remove('slide-in', 'slide-out');
         void cutInBox.offsetWidth;
-
         cutInBox.classList.add('slide-in');
-
         try {
           sePlayer.currentTime = 0;
           await sePlayer.play();
-        } catch (audioErr) {
-          console.warn("SE再生エラー:", audioErr);
-        }
-
+        } catch (audioErr) {}
         setTimeout(() => {
           cutInBox.classList.remove('slide-in');
           cutInBox.classList.add('slide-out');
-
-          setTimeout(() => {
-            cutInBox.classList.remove('slide-out');
-          }, 300);
+          setTimeout(() => { cutInBox.classList.remove('slide-out'); }, 300);
         }, 3000);
       }
 
@@ -485,16 +363,9 @@
         if (isForceMuted) return;
         const scBox = document.getElementById('sc-popup-box');
         scBox.classList.add('show');
-
         fireConfetti();
-
-        setTimeout(() => {
-          playSuperChatSynthSE();
-        }, 50);
-
-        setTimeout(() => {
-          scBox.classList.remove('show');
-        }, 4000);
+        setTimeout(() => { playSuperChatSynthSE(); }, 50);
+        setTimeout(() => { scBox.classList.remove('show'); }, 4000);
       }
 
       const canvas = document.getElementById('canvas-confetti');
@@ -515,8 +386,7 @@
         particles = [];
         for (let i = 0; i < 120; i++) {
           particles.push({
-            x: canvas.width / 2,
-            y: canvas.height / 2 + 50,
+            x: canvas.width / 2, y: canvas.height / 2 + 50,
             r: Math.random() * 6 + 4,
             dx: Math.random() * 30 - 15,
             dy: Math.random() * -20 - 10,
@@ -532,7 +402,6 @@
       function animateConfetti() {
         animatingConfetti = true;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         particles.forEach((p, index) => {
           p.tiltAngle += p.tiltAngleInc;
           p.y += (Math.cos(p.tiltAngle) + 1 + p.r / 2) / 2;
@@ -540,19 +409,14 @@
           p.dy += 0.4;
           p.x += p.dx;
           p.y += p.dy;
-
           ctx.beginPath();
           ctx.lineWidth = p.r;
           ctx.strokeStyle = p.color;
           ctx.moveTo(p.x + p.tilt + p.r, p.y);
           ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
           ctx.stroke();
-
-          if (p.y > canvas.height) {
-            particles.splice(index, 1);
-          }
+          if (p.y > canvas.height) { particles.splice(index, 1); }
         });
-
         if (particles.length > 0) {
           requestAnimationFrame(animateConfetti);
         } else {
@@ -561,9 +425,6 @@
         }
       }
 
-      // =========================================================
-      // AI Assistant "Genis" (音声読み上げ & アバター制御)[span_22](start_span)[span_22](end_span)
-      // =========================================================
       let isSpeaking = false;
       let currentLang = 'ja';
       const synthesizer = window.speechSynthesis;
@@ -572,15 +433,50 @@
       let isEchoWikiLocked = false;
       let isAutomaticTalk = false;
 
-      // ハイラル図鑑連携用の状態変数 (Z.html より統合)[span_23](start_span)[span_23](end_span)
-      let isWaitingCompendiumChoice = false;
-      let pendingCompendiumData = null;
-      let pendingCompendiumTitle = "";
+      // =========================================================
+      // ゼルダ & モンハン 攻略Wiki (Fandom MediaWiki) 連携機能
+      // =========================================================
+      const wikiRegistry = {
+        "ゼルダ": "zelda.fandom.com",
+        "ゼルダの伝説": "zelda.fandom.com",
+        "モンハン": "monsterhunter.fandom.com",
+        "モンスターハンター": "monsterhunter.fandom.com"
+      };
+
+      let isWaitingWikiChoice = false;
+      let pendingWikiResults = [];
+
+      async function searchGameWiki(inputText) {
+        let targetDomain = "zelda.fandom.com";
+        
+        for (const [keyword, domain] of Object.entries(wikiRegistry)) {
+          if (inputText.includes(keyword)) {
+            targetDomain = domain;
+            break;
+          }
+        }
+
+        const cleanQuery = inputText
+          .replace(/ゼルダの伝説|ゼルダ|モンスターハンター|モンハン|の攻略|の図鑑|を調べて|について調べて|について/g, "")
+          .trim() || inputText;
+
+        const apiUrl = `https://${targetDomain}/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanQuery)}&format=json&origin=*`;
+
+        try {
+          aiStatusMsg.innerText = "SEARCHING";
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          aiStatusMsg.innerText = "STANDBY";
+          return data.query?.search || [];
+        } catch (error) {
+          aiStatusMsg.innerText = "STANDBY";
+          console.warn("Wiki API Error:", error);
+          return [];
+        }
+      }
 
       function loadVoices() {
-        if (synthesizer) {
-          availableVoices = synthesizer.getVoices();
-        }
+        if (synthesizer) { availableVoices = synthesizer.getVoices(); }
       }
       loadVoices();
       if (synthesizer && synthesizer.onvoiceschanged !== undefined) {
@@ -611,31 +507,23 @@
         const lang = currentLang;
         const hasOnce = oncePhrases[lang] && oncePhrases[lang].length > 0;
         const rollChance = Math.random() < ONCE_PHRASE_CHANCE;
-
         if (hasOnce && rollChance) {
           const index = Math.floor(Math.random() * oncePhrases[lang].length);
           const selectedText = oncePhrases[lang][index];
           oncePhrases[lang].splice(index, 1);
           return selectedText;
         }
-
         if (currentLoopDecks[lang].length === 0) {
           currentLoopDecks[lang] = shuffleArray(loopPhrases[lang]);
         }
-
         return currentLoopDecks[lang].pop();
       }
 
       toggleLangBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         unlockAudio();
-        if (currentLang === 'ja') {
-          currentLang = 'en';
-          toggleLangBtn.innerText = "LANG: EN";
-        } else {
-          currentLang = 'ja';
-          toggleLangBtn.innerText = "LANG: JA";
-        }
+        currentLang = (currentLang === 'ja') ? 'en' : 'ja';
+        toggleLangBtn.innerText = "LANG: " + currentLang.toUpperCase();
         document.getElementById('sc-text-content').innerText = langConfig[currentLang].scDefaultText;
         updateSpeechRecognitionLang();
       });
@@ -654,11 +542,8 @@
           let isHighGlow = false;
           orbPulseInterval = setInterval(() => {
             isHighGlow = !isHighGlow;
-            if (isHighGlow) {
-              avatarOrb.classList.add('speaking-pulse');
-            } else {
-              avatarOrb.classList.remove('speaking-pulse');
-            }
+            if (isHighGlow) { avatarOrb.classList.add('speaking-pulse'); }
+            else { avatarOrb.classList.remove('speaking-pulse'); }
           }, 160);
         } else {
           avatarOrb.classList.remove('speaking-pulse');
@@ -669,13 +554,11 @@
         const chunks = [];
         const isEnglish = (lang === 'en');
         const maxLength = isEnglish ? 45 : 20;
-
         let current = "";
         for (let i = 0; i < text.length; i++) {
           current += text[i];
           const char = text[i];
           const isBreakChar = (char === "、" || char === "。" || char === "！" || char === "？" || char === "," || char === "." || char === "!" || char === "?");
-
           if (current.length >= maxLength || isBreakChar) {
             chunks.push(current.trim());
             current = "";
@@ -688,41 +571,30 @@
       function getVoiceForLang(langCode) {
         const voices = availableVoices.length > 0 ? availableVoices : synthesizer.getVoices();
         if (langCode === 'en') {
-          return voices.find(v => v.lang.startsWith('en') && (
-            v.name.includes('Google') || v.name.includes('Samantha')
-          )) || voices.find(v => v.lang.startsWith('en'));
+          return voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Samantha'))) || voices.find(v => v.lang.startsWith('en'));
         } else {
-          return voices.find(v => v.lang.startsWith('ja') && (
-            v.name.includes('Google') || v.name.includes('Ayumi') || v.name.includes('Haruka') || v.name.includes('Nanami')
-          )) || voices.find(v => v.lang.startsWith('ja'));
+          return voices.find(v => v.lang.startsWith('ja') && (v.name.includes('Google') || v.name.includes('Ayumi') || v.name.includes('Haruka') || v.name.includes('Nanami'))) || voices.find(v => v.lang.startsWith('ja'));
         }
       }
 
       function runAssistantVoice(fullText, lang, suppressSilenceRestart = false, bypassMute = false) {
         if (synthesizer.speaking) synthesizer.cancel();
-
         const textForSpeech = fullText.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
-
         const subtitleChunks = splitTextForGenis(fullText, lang);
         const speechChunks = splitTextForGenis(textForSpeech, lang);
-
         let currentChunkIndex = 0;
 
         function playNextChunk() {
           if (currentChunkIndex >= subtitleChunks.length && currentChunkIndex >= speechChunks.length) {
             isSpeaking = false;
-            if (!suppressSilenceRestart && !isForceMuted) {
-              resetSilenceTimer();
-            }
+            if (!suppressSilenceRestart && !isForceMuted) { resetSilenceTimer(); }
             updateAvatarState();
             aiStatusMsg.innerText = isForceMuted ? "MUTED" : "STANDBY";
             aiSubtitleBox.classList.remove('active');
-
             if (isAutomaticTalk) {
               isEchoWikiLocked = false;
               isAutomaticTalk = false;
             }
-
             safeStartRecognition();
             return;
           }
@@ -738,10 +610,8 @@
           if (currentChunkIndex < speechChunks.length) {
             const utterance = new SpeechSynthesisUtterance(speechChunks[currentChunkIndex]);
             utterance.lang = (lang === 'en') ? 'en-US' : 'ja-JP';
-
             const targetVoice = getVoiceForLang(lang);
             if (targetVoice) utterance.voice = targetVoice;
-
             utterance.rate = (lang === 'en') ? 1.05 : 1.15;
             utterance.pitch = (lang === 'en') ? 1.15 : 1.35;
 
@@ -751,7 +621,6 @@
               updateAvatarState();
               aiStatusMsg.innerText = "TALKING";
             };
-
             utterance.onend = () => {
               currentChunkIndex++;
               playNextChunk();
@@ -764,7 +633,6 @@
             }, 2000);
           }
         }
-
         playNextChunk();
       }
 
@@ -775,12 +643,10 @@
         runAssistantVoice(selectedText, currentLang);
       }
 
-      const TALK_INTERVAL = 2 * 60 * 1000;
       let talkIntervalId = null;
-
       function resetTalkInterval() {
         if (talkIntervalId) clearInterval(talkIntervalId);
-        talkIntervalId = setInterval(() => { triggerTalk(); }, TALK_INTERVAL);
+        talkIntervalId = setInterval(() => { triggerTalk(); }, 2 * 60 * 1000);
       }
 
       let initialPermissionTimer = null;
@@ -795,37 +661,7 @@
           }
         }, 2 * 60 * 1000);
       }
-
       startInitialPermissionTimer();
-
-      // =========================================================
-      // Hyrule Compendium API 連携機能 (Z.html より統合)[span_24](start_span)[span_24](end_span)
-      // =========================================================
-      async function searchHyruleCompendium(queryKeyword) {
-        const formattedQuery = queryKeyword.trim().toLowerCase().replace(/\s+/g, '_');
-        const apiUrl = `https://botw-compendium.herokuapp.com/api/v3/compendium/entry/${encodeURIComponent(formattedQuery)}`;
-
-        try {
-          aiStatusMsg.innerText = "SEARCHING";
-          const response = await fetch(apiUrl);
-          if (!response.ok) {
-            throw new Error("Item not found");
-          }
-          const json = await response.json();
-          aiStatusMsg.innerText = "STANDBY";
-          return json.data;
-        } catch (error) {
-          aiStatusMsg.innerText = "STANDBY";
-          console.warn("Compendium API Error:", error);
-          return null;
-        }
-      }
-
-      // =========================================================
-      // Wikipedia 連携・音声認識拡張機能[span_25](start_span)[span_25](end_span)
-      // =========================================================
-      let isRecognitionActive = false;
-      let voiceRecognition = null;
 
       async function fetchWikipediaSummary(title) {
         const url = `https://ja.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(title)}&format=json&origin=*`;
@@ -836,17 +672,15 @@
           const pageId = Object.keys(pages)[0];
           if (pageId !== "-1" && pages[pageId].extract) {
             let extract = pages[pageId].extract;
-            if (extract.length > 150) {
-              extract = extract.substring(0, 150) + "…";
-            }
+            if (extract.length > 150) { extract = extract.substring(0, 150) + "…"; }
             return extract;
           }
           return null;
-        } catch (e) {
-          console.warn("Wikipedia API エラー:", e);
-          return null;
-        }
+        } catch (e) { return null; }
       }
+
+      let isRecognitionActive = false;
+      let voiceRecognition = null;
 
       const WebKitSpeech = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (WebKitSpeech) {
@@ -854,40 +688,23 @@
         voiceRecognition.continuous = true;
         voiceRecognition.interimResults = false;
 
-        voiceRecognition.onstart = () => {
-          isRecognitionActive = true;
-          console.log("音声認識が開始されました。");
-        };
-
-        voiceRecognition.onend = () => {
-          isRecognitionActive = false;
-          console.log("音声認識が停止しました。");
-        };
-
-        voiceRecognition.onerror = (e) => {
-          isRecognitionActive = false;
-          console.warn("音声認識エラー:", e.error);
-        };
+        voiceRecognition.onstart = () => { isRecognitionActive = true; };
+        voiceRecognition.onend = () => { isRecognitionActive = false; };
+        voiceRecognition.onerror = () => { isRecognitionActive = false; };
 
         voiceRecognition.onresult = async (event) => {
           const currentIndex = event.resultIndex;
           const heardPhrase = event.results[currentIndex][0].transcript.trim().toLowerCase();
           const config = langConfig[currentLang];
 
-          console.log("認識した言葉:", heardPhrase);
-
           let tokenSurfaces = [];
           if (tokenizerInstance) {
             const tokens = tokenizerInstance.tokenize(heardPhrase);
             tokenSurfaces = tokens.map(t => t.surface_form);
-            console.log("形態素解析単語リスト:", tokenSurfaces);
           }
 
-          // 「話しかけてもいいですか？」への返答待ち
           if (isForceMuted && isWaitingPermissionResponse) {
             const isYes = ["はい", "いいよ", "どうぞ", "話して", "喋って", "ok", "yes"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
-            const isNoOrYet = ["いいえ", "まだ", "ダメ", "だめ", "しばらく", "no", "not yet"].some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
-
             if (isYes) {
               isForceMuted = false;
               isWaitingPermissionResponse = false;
@@ -897,7 +714,7 @@
               aiStatusMsg.innerText = "STANDBY";
               runAssistantVoice("分かりました！お話ししましょう。", currentLang);
               return;
-            } else if (isNoOrYet) {
+            } else {
               isWaitingPermissionResponse = false;
               runAssistantVoice("わかりました。ではまた後ほど聞いてみますね。", currentLang, true);
               startInitialPermissionTimer();
@@ -905,162 +722,80 @@
             }
           }
 
-          // 一般的な解除キーワードの判定
-          const resumeKeywords = ["話そうぜ", "喋ってくれ", "一旦喋ってくれ", "いいよ", "もういいよ", "再開", "おしゃべり再開", "話して"];
-          const isResumeRequested = resumeKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
-          if (isForceMuted && isResumeRequested) {
-            isForceMuted = false;
-            isWaitingPermissionResponse = false;
-            stopSilenceTimer();
-            resetSilenceTimer();
-            resetTalkInterval();
-            aiStatusMsg.innerText = "STANDBY";
-            runAssistantVoice("おっ、分かりました！またお話ししましょう。", currentLang);
-            return;
-          }
-
-          if (isForceMuted) {
-            return;
-          }
-
+          if (isForceMuted) return;
           resetSilenceTimer();
 
-          // 停止（静寂）キーワードの判定
-          const quietKeywords = [
-            "今話さなくていいよ", "今話さなくていい", "今は喋んなくていい", "しゃべんなくていい", 
-            "喋らなくていい", "喋るな", "一旦黙れ", "一旦喋るのやめてくれ", "喋るのやめて", 
-            "黙って", "静かにして", "静かに", "ちょっと黙って"
-          ];
-          const isQuietRequested = quietKeywords.some(kw => heardPhrase.includes(kw) || tokenSurfaces.includes(kw));
-          if (isQuietRequested) {
-            isForceMuted = true;
-            if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
-            stopSilenceTimer();
-            aiStatusMsg.innerText = "MUTED";
-            runAssistantVoice("はい、静かにします。", currentLang, true);
-            startInitialPermissionTimer();
-            return;
-          }
-
-          // 1. スパチャ判定[span_26](start_span)[span_26](end_span)
-          const isSC = config.scKeywords.some(keyword =>
-            heardPhrase.includes(keyword.toLowerCase()) || tokenSurfaces.includes(keyword.toLowerCase())
-          );
+          const isSC = config.scKeywords.some(keyword => heardPhrase.includes(keyword.toLowerCase()) || tokenSurfaces.includes(keyword.toLowerCase()));
           if (isSC) {
             triggerSuperChatEffects();
             return;
           }
 
-          // 2. カットイン判定[span_27](start_span)[span_27](end_span)
           for (const rule of config.cutInRules) {
-            const matched = rule.keywords.some(kw =>
-              heardPhrase.includes(kw.toLowerCase()) || tokenSurfaces.includes(kw.toLowerCase())
-            );
+            const matched = rule.keywords.some(kw => heardPhrase.includes(kw.toLowerCase()) || tokenSurfaces.includes(kw.toLowerCase()));
             if (matched) {
               executePhraseCutIn(rule.text);
               return;
             }
           }
 
-          // 3. AI辞書（patternDict）のキーワード反応チェック[span_28](start_span)[span_28](end_span)
           const patterns = aiData.patternDict?.[currentLang] || [];
           for (const item of patterns) {
             const regex = new RegExp(item.pattern, "i");
             if (regex.test(heardPhrase)) {
               const responses = item.responses;
               if (responses && responses.length > 0) {
-                const randomResp = responses[Math.floor(Math.random() * responses.length)];
-                runAssistantVoice(randomResp, currentLang);
+                runAssistantVoice(responses[Math.floor(Math.random() * responses.length)], currentLang);
                 return;
               }
             }
           }
 
-          // 4. ハイラル図鑑データの選択待ち判定 (Z.html より統合)[span_29](start_span)[span_29](end_span)
-          if (isWaitingCompendiumChoice) {
-            isWaitingCompendiumChoice = false;
+          // 4. 攻略Wiki検索の選択待ち判定
+          if (isWaitingWikiChoice) {
+            isWaitingWikiChoice = false;
             if (heardPhrase.includes('はい') || heardPhrase.includes('教えて') || heardPhrase.includes('yes') || tokenSurfaces.includes('はい') || tokenSurfaces.includes('教えて')) {
-              if (pendingCompendiumData) {
-                const desc = pendingCompendiumData.description || "説明文がありません。";
-                const locations = pendingCompendiumData.common_locations ? pendingCompendiumData.common_locations.join(', ') : "不明";
-                runAssistantVoice(`図鑑データをお伝えします。${desc} 主な生息地は、${locations} ですよ。`, currentLang);
+              if (pendingWikiResults.length > 0) {
+                const topResult = pendingWikiResults[0];
+                const snippet = topResult.snippet.replace(/<[^>]*>?/gm, '');
+                runAssistantVoice(`「${topResult.title}」のページが見つかりました。概要をお伝えします。${snippet}`, currentLang);
               } else {
-                runAssistantVoice("データが見つかりませんでした。", currentLang);
+                runAssistantVoice("該当するデータが見つかりませんでした。", currentLang);
               }
             } else {
               runAssistantVoice("わかりました。また気になるものがあったら聞いてくださいね。", currentLang);
             }
-            pendingCompendiumData = null;
+            pendingWikiResults = [];
             return;
           }
 
-          // 5. 「図鑑で〜を調べて」「〜の図鑑」などの明示的なハイラル図鑑検索指示
-          const compendiumMatch = heardPhrase.match(/(.+)の図鑑|図鑑で(.+)を調べて|図鑑(.+)/);
-          if (compendiumMatch) {
-            const targetQuery = (compendiumMatch[1] || compendiumMatch[2] || compendiumMatch[3]).trim();
-            if (targetQuery) {
-              if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
-              runAssistantVoice(`ハイラル図鑑から「${targetQuery}」を調べています...`, currentLang);
-              const compendiumResult = await searchHyruleCompendium(targetQuery);
-              if (compendiumResult) {
-                pendingCompendiumData = compendiumResult;
-                isWaitingCompendiumChoice = true;
-                runAssistantVoice(`「${compendiumResult.name}」のデータが見つかりました！詳しい説明を聞きますか？`, currentLang);
-              } else {
-                runAssistantVoice(`「${targetQuery}」に該当するデータはハイラル図鑑で見つかりませんでした。`, currentLang);
-              }
-              return;
+          // 5. ゼルダやモンハンの攻略Wiki検索指示
+          const isWikiTarget = Object.keys(wikiRegistry).some(k => heardPhrase.includes(k)) || heardPhrase.includes("攻略") || heardPhrase.includes("wiki");
+          if (isWikiTarget && (heardPhrase.includes("調べて") || heardPhrase.includes("教えて") || heardPhrase.includes("の"))) {
+            if (voiceRecognition && isRecognitionActive) voiceRecognition.stop();
+            runAssistantVoice(`攻略Wikiから調べています...`, currentLang);
+            const results = await searchGameWiki(heardPhrase);
+            if (results && results.length > 0) {
+              pendingWikiResults = results;
+              isWaitingWikiChoice = true;
+              runAssistantVoice(`「${results[0].title}」などが見つかりました。詳しい内容を聞きますか？`, currentLang);
+            } else {
+              runAssistantVoice(`指定されたキーワード에該当するページは見つかりませんでした。`, currentLang);
             }
+            return;
           }
 
-          // 6. 「〜について調べて」「〜を調べて」の明示的なWikipedia指示
-          const searchMatch = heardPhrase.match(/(.+)について調べて|(.+)を調べて/);
-          if (searchMatch) {
-            const targetWord = (searchMatch[1] || searchMatch[2]).trim();
-            if (targetWord) {
-              if (voiceRecognition && isRecognitionActive) {
-                voiceRecognition.stop();
-              }
-              const summary = await fetchWikipediaSummary(targetWord);
-              if (summary) {
-                runAssistantVoice(`${targetWord}についてですね。調べましたよ。 ${summary}`, currentLang);
-              } else {
-                runAssistantVoice(`${targetWord}について調べてみましたが、詳細な情報は見つかりませんでした。`, currentLang);
-              }
-              return;
-            }
-          }
-
-          // 7. 名詞をとらえて復唱 ＆ Wikipedia調査・自動提案機能[span_30](start_span)[span_30](end_span)
+          // 6. 通常のWikipediaフォールバック
           if (tokenizerInstance && !isEchoWikiLocked) {
             const tokens = tokenizerInstance.tokenize(heardPhrase);
-
-            const validNouns = tokens.filter(t => {
-              return t.pos === "名詞" &&
-                     t.pos_detail_1 !== "代名詞" &&
-                     t.pos_detail_1 !== "非自立" &&
-                     t.pos_detail_1 !== "数" &&
-                     t.pos_detail_1 !== "接尾";
-            });
-
+            const validNouns = tokens.filter(t => t.pos === "名詞" && t.pos_detail_1 !== "代名詞" && t.pos_detail_1 !== "非自立" && t.pos_detail_1 !== "数" && t.pos_detail_1 !== "接尾");
             if (validNouns.length > 0) {
               const targetWord = validNouns[validNouns.length - 1].surface_form;
-              const echoTemplates = [
-                `${targetWord}、ですね。`,
-                `${targetWord}についてですね。`
-              ];
-              const echoReply = echoTemplates[Math.floor(Math.random() * echoTemplates.length)];
-
-              if (voiceRecognition && isRecognitionActive) {
-                voiceRecognition.stop();
-              }
-
+              if (voiceRecognition && isRecognitionActive) { voiceRecognition.stop(); }
               const summary = await fetchWikipediaSummary(targetWord);
               if (summary) {
                 isEchoWikiLocked = true;
-                runAssistantVoice(`${echoReply} Wikipediaで調べてみました。結果を聞きますか？`, currentLang);
-              } else {
-                runAssistantVoice(`${echoReply} ですが、Wikipediaの情報は見つかりませんでした。`, currentLang);
+                runAssistantVoice(`${targetWord}についてですね。Wikipediaで調べてみました。結果を聞きますか？`, currentLang);
               }
               return;
             }
@@ -1069,8 +804,6 @@
 
         updateSpeechRecognitionLang();
         setInterval(() => { if (!isRecognitionActive && !isForceMuted) safeStartRecognition(); }, 1000);
-      } else {
-        console.warn("Speech API 非対応ブラウザです。Chrome等を使用してください。");
       }
 
       function safeStartRecognition() {
@@ -1089,7 +822,6 @@
       document.body.addEventListener('click', (e) => {
         if (e.target === toggleBtn || e.target === toggleLangBtn) return;
         if (isForceMuted) return;
-
         unlockAudio();
         safeStartRecognition();
         resetSilenceTimer();
