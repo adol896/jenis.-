@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Assistant "Genis" & Multi-Lang SuperChat Overlay</title>
     <style>
-      /* ベーススタイル[span_1](start_span)[span_1](end_span) */
+      /* ベーススタイル */
       html, body {
           margin: 0; padding: 0; width: 100%; height: 100%;
-          background-color: #00FF00; overflow: hidden; /* OBSのクロマキー(Green)用[span_2](start_span)[span_2](end_span) */
+          background-color: #00FF00; overflow: hidden; /* OBSのクロマキー(Green)用 */
           font-family: 'Helvetica Neue', Arial, sans-serif; color: #ffffff;
       }
 
-      /* [1] AI Assistant (Genis) UI[span_3](start_span)[span_3](end_span) */
+      /* [1] AI Assistant (Genis) UI */
       #assistant-container {
           position: absolute; bottom: -20px; left: 10px;
           display: flex; flex-direction: column; align-items: center; z-index: 10;
@@ -79,7 +79,7 @@
       }
       #ai-subtitle-box.active { opacity: 1; transform: translate(-50%, 0); }
 
-      /* [2] カットイン・スパチャ演出 UI[span_4](start_span)[span_4](end_span) */
+      /* [2] カットイン・スパチャ演出 UI */
       #phrase-cutin-box {
           position: absolute; top: 45%; left: 50%;
           width: 90%; max-width: 600px; height: 110px;
@@ -150,25 +150,26 @@
       }
       .modal-content {
           background: #0f1423; border: 1px solid #00f3ff; border-radius: 8px;
-          padding: 20px; width: 80%; max-width: 500px; max-height: 70vh;
+          padding: 20px; width: 80%; max-width: 520px; max-height: 75vh;
           overflow-y: auto; color: #ffffff; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
           font-size: 12px; line-height: 1.6;
       }
       .modal-content h2 { font-size: 16px; color: #00f3ff; margin-top: 0; border-bottom: 1px solid #00f3ff; padding-bottom: 5px; }
       .modal-content h3 { font-size: 14px; margin: 15px 0 5px 0; color: #ff9900; }
+      .modal-content a { color: #00f3ff; text-decoration: underline; }
       .modal-content pre { background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 10px; color: #aaa; }
     </style>
 
-    <!-- データファイルの読み込み[span_5](start_span)[span_5](end_span) -->
+    <!-- データファイルの読み込み -->
     <script src="data.js"></script>
     <script src="data2.js"></script>
     <script src="kuromoji.js"></script>
   </head>
   <body>
-    <!-- 紙吹雪用キャンバス[span_6](start_span)[span_6](end_span) -->
+    <!-- 紙吹雪用キャンバス -->
     <canvas id="canvas-confetti"></canvas>
 
-    <!-- AI アバター ＆ 操作UI[span_7](start_span)[span_7](end_span) -->
+    <!-- AI アバター ＆ 操作UI -->
     <div id="assistant-container">
       <div id="avatar-frame">
         <div id="avatar-orb"></div>
@@ -181,15 +182,15 @@
       </div>
     </div>
 
-    <!-- AI 字幕ボックス[span_8](start_span)[span_8](end_span) -->
+    <!-- AI 字幕ボックス -->
     <div id="ai-subtitle-box">...</div>
 
-    <!-- 通常ワードカットイン[span_9](start_span)[span_9](end_span) -->
+    <!-- 通常ワードカットイン -->
     <div id="phrase-cutin-box">
       <div id="phrase-text-content"></div>
     </div>
 
-    <!-- スパチャポップアップ[span_10](start_span)[span_10](end_span) -->
+    <!-- スパチャポップアップ -->
     <div id="sc-popup-box">
       <div id="sc-text-content">ありがとうございます！</div>
     </div>
@@ -197,9 +198,9 @@
     <!-- クレジット表示用モーダル -->
     <div id="credits-modal" class="modal-overlay">
       <div class="modal-content">
-        <h2>OPEN SOURCE LICENSES</h2>
+        <h2>CREDITS & LICENSES</h2>
         
-        <h3>kuromoji.js</h3>
+        <h3>kuromoji.js & IPADIC</h3>
         <p>JavaScript port of Kuromoji Japanese morphological analyzer.</p>
         <p>Copyright (c) 2014 Takuya Asano</p>
         <p>Licensed under the Apache License, Version 2.0 (the "License");</p>
@@ -210,6 +211,18 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
         </pre>
+        <p>Dictionary data powered by IPADIC (Copyright 1999-2007 Information-technology Promotion Agency, Japan).</p>
+
+        <h3>Wikipedia Content & API</h3>
+        <p>Information retrieval features use the <a href="https://www.wikipedia.org/" target="_blank" rel="noopener">Wikipedia API</a>.</p>
+        <p>Text fetched from Wikipedia is available under the <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)</a>.</p>
+
+        <h3>Sound Effects</h3>
+        <p>Audio File: <code>剣を抜く.mp3</code></p>
+        <p>Sound effect provided by [音源配布サイト名または作者名を記載] (e.g., 効果音ラボ / OtoLogic / DOVA-SYNDROME).</p>
+
+        <h3>Browser Standard Web APIs</h3>
+        <p>Voice Synthesis & Speech Recognition powered by W3C Web Speech API standard features implemented in modern web browsers.</p>
 
         <div style="text-align: right; margin-top: 15px;">
           <button id="close-credits-btn" class="ui-btn">CLOSE</button>
@@ -219,7 +232,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
     <script>
       // =========================================================
-      // Kuromoji 初期化[span_11](start_span)[span_11](end_span)
+      // Kuromoji 初期化
       // =========================================================
       let tokenizerInstance = null;
 
@@ -258,7 +271,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       });
 
       // =========================================================
-      // データの統合処理 (data.js と data2.js をマージ)[span_12](start_span)[span_12](end_span)
+      // データの統合処理 (data.js と data2.js をマージ)
       // =========================================================
       const rawData1 = window.AIData1 || window.AIData || {};
       const rawData2 = window.AIData2 || {};
@@ -317,7 +330,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       };
 
       // =========================================================
-      // 言語別 設定定義[span_13](start_span)[span_13](end_span)
+      // 言語別 設定定義
       // =========================================================
       const langConfig = {
         ja: {
@@ -341,7 +354,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       };
 
       // =========================================================
-      // 音声・効果音（SE）の設定[span_14](start_span)[span_14](end_span)
+      // 音声・効果音（SE）の設定
       // =========================================================
       const sePlayer = new Audio('./' + encodeURIComponent("剣を抜く.mp3"));
       sePlayer.volume = 0.7;
@@ -474,13 +487,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       }
 
       // =========================================================
-      // 強制停止モード・権限確認の管理フラグ[span_15](start_span)[span_15](end_span)
+      // 強制停止モード・権限確認の管理フラグ
       // =========================================================
       let isForceMuted = true;
       let isWaitingPermissionResponse = false;
 
       // =========================================================
-      // 20秒無言検知・自動トーク機能[span_16](start_span)[span_16](end_span)
+      // 20秒無言検知・自動トーク機能
       // =========================================================
       let silenceTimer = null;
       const SILENCE_LIMIT = 20 * 1000;
@@ -516,7 +529,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       }
 
       // =========================================================
-      // カットイン ＆ スパチャ演出 ＆ 紙吹雪機能[span_17](start_span)[span_17](end_span)
+      // カットイン ＆ スパチャ演出 ＆ 紙吹雪機能
       // =========================================================
       async function executePhraseCutIn(text) {
         if (isForceMuted) return;
@@ -628,7 +641,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       }
 
       // =========================================================
-      // AI Assistant "Genis" (音声読み上げ & アバター制御)[span_18](start_span)[span_18](end_span)
+      // AI Assistant "Genis" (音声読み上げ & アバター制御)
       // =========================================================
       let isSpeaking = false;
       let currentLang = 'ja';
@@ -860,7 +873,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
       startInitialPermissionTimer();
 
       // =========================================================
-      // Wikipedia 連携・音声認識拡張機能[span_19](start_span)[span_19](end_span)
+      // Wikipedia 連携・音声認識拡張機能
       // =========================================================
       let isRecognitionActive = false;
       let voiceRecognition = null;
@@ -967,7 +980,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
           resetSilenceTimer();
 
-          // 停止（静寂）キーワードの判定（誤爆防止のため、完全一致か単語一致に変更）
+          // 停止（静寂）キーワードの判定
           const quietKeywords = [
             "今話さなくていいよ", "今話さなくていい", "今は喋んなくていい", "しゃべんなくていい", 
             "喋らなくていい", "喋るな", "一旦黙れ", "一旦喋るのやめてくれ", "喋るのやめて", 
@@ -984,7 +997,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
             return;
           }
 
-          // 1. スパチャ判定[span_20](start_span)[span_20](end_span)
+          // 1. スパチャ判定
           const isSC = config.scKeywords.some(keyword =>
             heardPhrase.includes(keyword.toLowerCase()) || tokenSurfaces.includes(keyword.toLowerCase())
           );
@@ -993,7 +1006,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
             return;
           }
 
-          // 2. カットイン判定[span_21](start_span)[span_21](end_span)
+          // 2. カットイン判定
           for (const rule of config.cutInRules) {
             const matched = rule.keywords.some(kw =>
               heardPhrase.includes(kw.toLowerCase()) || tokenSurfaces.includes(kw.toLowerCase())
@@ -1004,7 +1017,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
             }
           }
 
-          // 3. AI辞書（patternDict）のキーワード反応チェック[span_22](start_span)[span_22](end_span)
+          // 3. AI辞書（patternDict）のキーワード反応チェック
           const patterns = aiData.patternDict?.[currentLang] || [];
           for (const item of patterns) {
             const regex = new RegExp(item.pattern, "i");
